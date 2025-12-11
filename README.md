@@ -351,6 +351,10 @@ MIT
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+## Publishing
+
+For maintainers: See the [Publishing Guide](./docs/PUBLISHING.md) for detailed instructions on publishing this library to NPM.
+
 ## Links
 
 - [Intervals.icu API Documentation](https://intervals.icu/api/v1/docs)
