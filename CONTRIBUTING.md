@@ -1,6 +1,6 @@
-# Contributing to node-intervals-icu
+# Contributing to intervals-icu
 
-Thank you for your interest in contributing to `node-intervals-icu`! This project aims to provide a comprehensive and easy-to-use TypeScript client for the Intervals.icu API. Every contribution helps make this library better for the entire community.
+Thank you for your interest in contributing to `intervals-icu`! This project aims to provide a comprehensive and easy-to-use TypeScript client for the Intervals.icu API. Every contribution helps make this library better for the entire community.
 
 ## 🌟 How You Can Help
 
@@ -34,8 +34,8 @@ Before suggesting a new feature:
 
 1. Fork and clone the repository:
 ```bash
-git clone https://github.com/YOUR_USERNAME/node-intervals-icu.git
-cd node-intervals-icu
+git clone https://github.com/YOUR_USERNAME/intervals-icu.git
+cd intervals-icu
 ```
 
 2. Install dependencies:
@@ -116,4 +116,4 @@ Feel free to open an issue with your question, or reach out to the maintainer. W
 
 ## 🙏 Thank You!
 
-Every contribution, no matter how small, is valuable and appreciated. Thank you for helping make `node-intervals-icu` better!
+Every contribution, no matter how small, is valuable and appreciated. Thank you for helping make `intervals-icu` better!

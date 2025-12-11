@@ -1,6 +1,6 @@
 # Documentation
 
-This directory contains documentation for maintainers and contributors of the `node-intervals-icu` library.
+This directory contains documentation for maintainers and contributors of the `intervals-icu` library.
 
 ## Available Documentation
 
@@ -16,7 +16,7 @@ Comprehensive guide for publishing the library to NPM Registry. Includes:
 
 ## Package Information
 
-- **Package Name**: `node-intervals-icu`
+- **Package Name**: `intervals-icu`
 - **Type**: TypeScript library with dual package support (CommonJS + ES Modules)
 - **Bundle Size**: ~10KB (packed), ~71KB (unpacked)
 - **Node Version**: >=16.0.0
@@ -41,8 +41,8 @@ The library is designed to be:
 
 - [Main README](../README.md) - User-facing documentation
 - [Publishing Guide](./PUBLISHING.md) - How to publish to NPM
-- [GitHub Repository](https://github.com/paladini/node-intervals-icu)
-- [NPM Package](https://www.npmjs.com/package/node-intervals-icu)
+- [GitHub Repository](https://github.com/paladini/intervals-icu)
+- [NPM Package](https://www.npmjs.com/package/intervals-icu)
 - [Intervals.icu API Documentation](https://intervals.icu/api/v1/docs)
 
 ## Note

@@ -1,4 +1,4 @@
-# node-intervals-icu
+# intervals-icu
 
 A lightweight TypeScript client library for the [Intervals.icu](https://intervals.icu) API. Supports all major endpoints including athletes, events, wellness, workouts, and activities.
 
@@ -15,13 +15,13 @@ A lightweight TypeScript client library for the [Intervals.icu](https://interval
 ## Installation
 
 ```bash
-npm install node-intervals-icu
+npm install intervals-icu
 ```
 
 ## Quick Start
 
 ```typescript
-import { IntervalsClient } from 'node-intervals-icu';
+import { IntervalsClient } from 'intervals-icu';
 
 // Initialize the client
 const client = new IntervalsClient({
@@ -297,7 +297,7 @@ console.log(`Remaining: ${remaining}, Resets at: ${resetTime}`);
 The client throws `IntervalsAPIError` for all API-related errors:
 
 ```typescript
-import { IntervalsClient, IntervalsAPIError } from 'node-intervals-icu';
+import { IntervalsClient, IntervalsAPIError } from 'intervals-icu';
 
 try {
   const athlete = await client.getAthlete();
@@ -365,4 +365,4 @@ For maintainers: See the [Publishing Guide](./docs/PUBLISHING.md) for detailed i
 
 - [Intervals.icu API Documentation](https://intervals.icu/api/v1/docs)
 - [Intervals.icu Website](https://intervals.icu)
-- [GitHub Repository](https://github.com/paladini/node-intervals-icu)
+- [GitHub Repository](https://github.com/paladini/intervals-icu)
