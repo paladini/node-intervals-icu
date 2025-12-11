@@ -345,11 +345,17 @@ Your athlete ID can be found in the URL when viewing your profile (e.g., `i12345
 
 ## License
 
-MIT
+MIT License - Copyright (c) 2025 Fernando Paladini
+
+See the [LICENSE](./LICENSE) file for details.
+
+## Acknowledgments
+
+Special thanks to *Filipe Ronzani* for the inspiration and the initial idea that led to the creation of this library. Your project was the spark that made this happen! 🙏
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please read our [Contributing Guide](./CONTRIBUTING.md) to learn how you can help make this project better.
 
 ## Publishing
 
