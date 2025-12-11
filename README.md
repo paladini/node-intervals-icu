@@ -351,7 +351,7 @@ See the [LICENSE](./LICENSE) file for details.
 
 ## Acknowledgments
 
-Special thanks to *Filipe Ronzani* for the inspiration and the initial idea that led to the creation of this library. Your project was the spark that made this happen! 🙏
+Special thanks to Filipe for the inspiration and the initial idea that led to the creation of this library. Your project was the spark that made this happen! 🙏
 
 ## Contributing
 
