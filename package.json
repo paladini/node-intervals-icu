@@ -2,14 +2,14 @@
   "name": "node-intervals-icu",
   "version": "1.0.0",
   "description": "Lightweight TypeScript client library for Intervals.icu API",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
   },
   "type": "module",
@@ -32,8 +32,16 @@
     "client",
     "typescript"
   ],
-  "author": "",
+  "author": "Fernando Paladini <paladini@users.noreply.github.com> (https://github.com/paladini)",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paladini/node-intervals-icu.git"
+  },
+  "bugs": {
+    "url": "https://github.com/paladini/node-intervals-icu/issues"
+  },
+  "homepage": "https://github.com/paladini/node-intervals-icu#readme",
   "dependencies": {
     "axios": "^1.6.0"
   },
