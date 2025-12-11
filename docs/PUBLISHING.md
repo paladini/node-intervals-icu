@@ -73,10 +73,10 @@ ls -la dist/
 ```
 
 Expected files:
-- `index.js` - CommonJS bundle
-- `index.mjs` - ES Module bundle
-- `index.d.ts` - TypeScript type definitions
-- `index.d.mts` - TypeScript type definitions for ES modules (if generated)
+- `index.js` - ES Module bundle (ESM, because `"type": "module"` in package.json)
+- `index.cjs` - CommonJS bundle (CJS, explicit extension)
+- `index.d.ts` - TypeScript type definitions (ESM)
+- `index.d.cts` - TypeScript type definitions (CJS)
 
 ### 4. Test Package Contents
 
@@ -151,15 +151,15 @@ The `package.json` is configured to support both CommonJS and ES Modules:
 
 ```json
 {
-  "main": "./dist/index.js",           // CommonJS entry point
-  "module": "./dist/index.mjs",        // ES Module entry point
+  "main": "./dist/index.cjs",          // CommonJS entry point
+  "module": "./dist/index.js",         // ES Module entry point
   "types": "./dist/index.d.ts",        // TypeScript definitions
-  "type": "module",                     // Default module system
+  "type": "module",                     // Default module system (makes .js = ESM)
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",    // TypeScript types
-      "import": "./dist/index.mjs",    // ES Module import
-      "require": "./dist/index.js"     // CommonJS require
+      "import": "./dist/index.js",     // ES Module import
+      "require": "./dist/index.cjs"    // CommonJS require
     }
   },
   "files": [
@@ -167,6 +167,8 @@ The `package.json` is configured to support both CommonJS and ES Modules:
   ]
 }
 ```
+
+**Note**: With `"type": "module"`, Node.js treats `.js` files as ES Modules by default. The `.cjs` extension explicitly marks CommonJS files. This is the modern Node.js dual package convention.
 
 ### What Makes This Package Lightweight
 
@@ -188,6 +190,14 @@ This:
 - Generates TypeScript declarations (`--dts`)
 - Cleans the output directory before building (`--clean`)
 - Takes `src/index.ts` as the entry point
+
+**File naming convention**: Since `package.json` has `"type": "module"`, tsup produces:
+- `index.js` - ES Module format (default for `.js` when type is "module")
+- `index.cjs` - CommonJS format (explicit `.cjs` extension)
+- `index.d.ts` - TypeScript definitions for ESM
+- `index.d.cts` - TypeScript definitions for CJS
+
+This follows the modern Node.js dual package pattern recommended for new packages.
 
 ## Verification
 
