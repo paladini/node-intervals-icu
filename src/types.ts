@@ -44,6 +44,7 @@ export interface Event {
   athlete_id?: string;
   start_date_local: string;
   category?: string;
+  type?: string;
   name?: string;
   description?: string;
   color?: string;

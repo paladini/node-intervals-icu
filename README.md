@@ -135,6 +135,40 @@ Delete an event.
 await client.deleteEvent(12345);
 ```
 
+#### Filtering Events by Type
+
+Events now include a `type` field that allows you to reliably differentiate between different event types (Run, Ride, Swim, Strength, etc.) without relying on name patterns:
+
+```typescript
+// Get all events
+const allEvents = await client.getEvents({
+  oldest: '2024-01-01',
+  newest: '2024-12-31'
+});
+
+// Filter only running events
+const runEvents = allEvents.filter(event => event.type === 'Run');
+
+// Filter only cycling events
+const rideEvents = allEvents.filter(event => event.type === 'Ride');
+
+// Filter only swimming events
+const swimEvents = allEvents.filter(event => event.type === 'Swim');
+
+// Filter only strength training events
+const strengthEvents = allEvents.filter(event => event.type === 'Strength');
+
+// Find a specific running workout
+const runWorkout = allEvents.find(e => 
+  e.category === 'WORKOUT' && e.type === 'Run'
+);
+```
+
+This approach is:
+- ✅ Reliable and type-safe
+- ✅ Language-agnostic (works with any language/locale)
+- ✅ More maintainable than name-based pattern matching
+
 ### Wellness Methods
 
 #### `getWellness(options?: PaginationOptions, athleteId?: string): Promise<Wellness[]>`
