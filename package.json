@@ -39,12 +39,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/paladini/intervals-icu.git"
+    "url": "git+https://github.com/paladini/node-intervals-icu.git"
   },
   "bugs": {
-    "url": "https://github.com/paladini/intervals-icu/issues"
+    "url": "https://github.com/paladini/node-intervals-icu/issues"
   },
-  "homepage": "https://github.com/paladini/intervals-icu#readme",
+  "homepage": "https://github.com/paladini/node-intervals-icu#readme",
   "dependencies": {
     "axios": "^1.6.0"
   },
