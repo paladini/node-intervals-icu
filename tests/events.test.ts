@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { IntervalsClient } from '../src/client.js';
-import type { Event } from '../src/types.js';
+import { mockEvents, mockEvent, mockEventWithoutType } from './fixtures/events.js';
 
 // Mock axios
 vi.mock('axios');
 import axios from 'axios';
 const mockedAxios = axios as any;
 
-describe('IntervalsClient - getEvents', () => {
+describe('IntervalsClient - Events', () => {
   let client: IntervalsClient;
 
   beforeEach(() => {
@@ -32,63 +32,24 @@ describe('IntervalsClient - getEvents', () => {
 
     // Setup default mock for the request method
     vi.spyOn(client as any, 'request').mockImplementation(async (config: any) => {
-      if (config.url.includes('/events')) {
+      if (config.url.includes('/events') && config.method === 'GET') {
+        if (config.url.match(/\/events\/\d+$/)) {
+          return mockEvent;
+        }
         return mockEvents;
+      }
+      if (config.url.includes('/events') && config.method === 'POST') {
+        return { ...config.data, id: 100, created: '2024-01-20T10:00:00Z', updated: '2024-01-20T10:00:00Z' };
+      }
+      if (config.url.includes('/events') && config.method === 'PUT') {
+        return { ...mockEvent, ...config.data, updated: '2024-01-20T12:00:00Z' };
+      }
+      if (config.url.includes('/events') && config.method === 'DELETE') {
+        return;
       }
       return [];
     });
   });
-
-  const mockEvents: Event[] = [
-    {
-      id: 1,
-      athlete_id: 'test-athlete-id',
-      start_date_local: '2024-01-15',
-      category: 'WORKOUT',
-      type: 'Run',
-      name: 'Morning Run',
-      description: 'Easy 10k run',
-      color: '#ff0000',
-      created: '2024-01-14T10:00:00Z',
-      updated: '2024-01-14T10:00:00Z',
-    },
-    {
-      id: 2,
-      athlete_id: 'test-athlete-id',
-      start_date_local: '2024-01-16',
-      category: 'WORKOUT',
-      type: 'Ride',
-      name: 'Afternoon Ride',
-      description: 'Tempo intervals',
-      color: '#00ff00',
-      created: '2024-01-15T14:00:00Z',
-      updated: '2024-01-15T14:00:00Z',
-    },
-    {
-      id: 3,
-      athlete_id: 'test-athlete-id',
-      start_date_local: '2024-01-17',
-      category: 'WORKOUT',
-      type: 'Swim',
-      name: 'Pool Session',
-      description: 'Technique work',
-      color: '#0000ff',
-      created: '2024-01-16T08:00:00Z',
-      updated: '2024-01-16T08:00:00Z',
-    },
-    {
-      id: 4,
-      athlete_id: 'test-athlete-id',
-      start_date_local: '2024-01-18',
-      category: 'WORKOUT',
-      type: 'Strength',
-      name: 'Gym Session',
-      description: 'Upper body strength',
-      color: '#ffff00',
-      created: '2024-01-17T17:00:00Z',
-      updated: '2024-01-17T17:00:00Z',
-    },
-  ];
 
   it('should return events with type field', async () => {
     const events = await client.getEvents({
@@ -99,8 +60,9 @@ describe('IntervalsClient - getEvents', () => {
     expect(events).toBeDefined();
     expect(events.length).toBeGreaterThan(0);
     
-    // Validate that all events have the type field
-    events.forEach((event) => {
+    // Validate that workout events have the type field
+    const workoutEvents = events.filter(e => e.category === 'WORKOUT');
+    workoutEvents.forEach((event) => {
       expect(event).toHaveProperty('type');
       expect(typeof event.type).toBe('string');
     });
@@ -173,19 +135,7 @@ describe('IntervalsClient - getEvents', () => {
   });
 
   it('should handle events without type field gracefully', async () => {
-    // Mock a scenario where some events don't have type
-    const eventsWithoutType: Event[] = [
-      {
-        id: 5,
-        athlete_id: 'test-athlete-id',
-        start_date_local: '2024-01-19',
-        category: 'NOTE',
-        name: 'Rest Day',
-        description: 'Complete rest',
-      },
-    ];
-
-    vi.spyOn(client as any, 'request').mockImplementation(async () => eventsWithoutType);
+    vi.spyOn(client as any, 'request').mockImplementation(async () => [mockEventWithoutType]);
 
     const events = await client.getEvents({
       oldest: '2024-01-01',
@@ -195,5 +145,42 @@ describe('IntervalsClient - getEvents', () => {
     expect(events).toBeDefined();
     expect(events.length).toBe(1);
     expect(events[0].type).toBeUndefined();
+  });
+
+  it('should get a specific event by ID', async () => {
+    const event = await client.getEvent(1);
+
+    expect(event).toBeDefined();
+    expect(event.id).toBe(1);
+    expect(event.name).toBe('Morning Run');
+    expect(event.type).toBe('Run');
+  });
+
+  it('should create a new event', async () => {
+    const newEvent = await client.createEvent({
+      start_date_local: '2024-01-20',
+      name: 'New Event',
+      category: 'WORKOUT',
+      type: 'Run',
+      description: 'Test event',
+    });
+
+    expect(newEvent).toBeDefined();
+    expect(newEvent.id).toBeDefined();
+    expect(newEvent.name).toBe('New Event');
+  });
+
+  it('should update an existing event', async () => {
+    const updated = await client.updateEvent(1, {
+      name: 'Updated Morning Run',
+    });
+
+    expect(updated).toBeDefined();
+    expect(updated.name).toBe('Updated Morning Run');
+    expect(updated.updated).toBeDefined();
+  });
+
+  it('should delete an event', async () => {
+    await expect(client.deleteEvent(1)).resolves.toBeUndefined();
   });
 });
