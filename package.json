@@ -1,6 +1,6 @@
 {
   "name": "intervals-icu",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Lightweight TypeScript client library for Intervals.icu API",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
