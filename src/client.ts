@@ -1,7 +1,5 @@
-import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
 import type {
   IntervalsConfig,
-  APIError,
   Athlete,
   Event,
   EventInput,
@@ -13,28 +11,29 @@ import type {
   ActivityInput,
   PaginationOptions,
 } from './types.js';
+import { AxiosHttpClient } from './core/axios-http-client.js';
+import { ErrorHandler } from './core/error-handler.js';
+import { RateLimitTracker } from './core/rate-limit-tracker.js';
+import { AthleteService } from './services/athlete.service.js';
+import { EventService } from './services/event.service.js';
+import { WellnessService } from './services/wellness.service.js';
+import { WorkoutService } from './services/workout.service.js';
+import { ActivityService } from './services/activity.service.js';
 
-/**
- * Custom error class for Intervals.icu API errors
- */
-export class IntervalsAPIError extends Error implements APIError {
-  status?: number;
-  code?: string;
-
-  constructor(message: string, status?: number, code?: string) {
-    super(message);
-    this.name = 'IntervalsAPIError';
-    this.status = status;
-    this.code = code;
-    Object.setPrototypeOf(this, IntervalsAPIError.prototype);
-  }
-}
+// Re-export for backwards compatibility
+export { IntervalsAPIError } from './core/error-handler.js';
 
 /**
  * Intervals.icu API Client
  * 
  * A lightweight TypeScript client for the Intervals.icu API.
  * Supports all major endpoints including athletes, events, wellness, workouts, and activities.
+ * 
+ * This client follows SOLID principles:
+ * - Single Responsibility: Delegates to specialized services
+ * - Open/Closed: Extensible through service composition
+ * - Interface Segregation: Services implement focused interfaces
+ * - Dependency Inversion: Depends on abstractions (IHttpClient)
  * 
  * @example
  * ```typescript
@@ -54,10 +53,12 @@ export class IntervalsAPIError extends Error implements APIError {
  * ```
  */
 export class IntervalsClient {
-  private httpClient: AxiosInstance;
-  private athleteId: string;
-  private rateLimitRemaining?: number;
-  private rateLimitReset?: Date;
+  private rateLimitTracker: RateLimitTracker;
+  private athleteService: AthleteService;
+  private eventService: EventService;
+  private wellnessService: WellnessService;
+  private workoutService: WorkoutService;
+  private activityService: ActivityService;
 
   /**
    * Creates a new Intervals.icu API client
@@ -65,45 +66,19 @@ export class IntervalsClient {
    * @param config - Configuration object with API key and optional settings
    */
   constructor(config: IntervalsConfig) {
-    this.athleteId = config.athleteId || 'me';
+    const athleteId = config.athleteId || 'me';
     
-    this.httpClient = axios.create({
-      baseURL: config.baseURL || 'https://intervals.icu/api/v1',
-      timeout: config.timeout || 10000,
-      headers: {
-        'Authorization': `Basic ${Buffer.from(`API_KEY:${config.apiKey}`).toString('base64')}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    // Initialize core services following Dependency Inversion Principle
+    this.rateLimitTracker = new RateLimitTracker();
+    const errorHandler = new ErrorHandler();
+    const httpClient = new AxiosHttpClient(config, errorHandler, this.rateLimitTracker);
 
-    // Add response interceptor for rate limit tracking
-    this.httpClient.interceptors.response.use(
-      (response) => {
-        this.updateRateLimitInfo(response.headers);
-        return response;
-      },
-      (error: AxiosError) => {
-        if (error.response) {
-          this.updateRateLimitInfo(error.response.headers);
-        }
-        return Promise.reject(this.handleError(error));
-      }
-    );
-  }
-
-  /**
-   * Updates rate limit information from response headers
-   */
-  private updateRateLimitInfo(headers: Record<string, unknown>): void {
-    const remaining = headers['x-ratelimit-remaining'];
-    const reset = headers['x-ratelimit-reset'];
-    
-    if (typeof remaining === 'string') {
-      this.rateLimitRemaining = parseInt(remaining, 10);
-    }
-    if (typeof reset === 'string') {
-      this.rateLimitReset = new Date(parseInt(reset, 10) * 1000);
-    }
+    // Initialize resource-specific services following Single Responsibility Principle
+    this.athleteService = new AthleteService(httpClient, athleteId);
+    this.eventService = new EventService(httpClient, athleteId);
+    this.wellnessService = new WellnessService(httpClient, athleteId);
+    this.workoutService = new WorkoutService(httpClient, athleteId);
+    this.activityService = new ActivityService(httpClient, athleteId);
   }
 
   /**
@@ -112,7 +87,7 @@ export class IntervalsClient {
    * @returns The number of remaining API calls, or undefined if not yet determined
    */
   public getRateLimitRemaining(): number | undefined {
-    return this.rateLimitRemaining;
+    return this.rateLimitTracker.getRemaining();
   }
 
   /**
@@ -121,49 +96,7 @@ export class IntervalsClient {
    * @returns The reset time, or undefined if not yet determined
    */
   public getRateLimitReset(): Date | undefined {
-    return this.rateLimitReset;
-  }
-
-  /**
-   * Handles API errors and converts them to IntervalsAPIError
-   */
-  private handleError(error: AxiosError): IntervalsAPIError {
-    if (error.response) {
-      const status = error.response.status;
-      const message = (error.response.data as { message?: string })?.message || error.message;
-      
-      if (status === 429) {
-        return new IntervalsAPIError(
-          `Rate limit exceeded. ${this.rateLimitReset ? `Resets at ${this.rateLimitReset.toISOString()}` : ''}`,
-          status,
-          'RATE_LIMIT_EXCEEDED'
-        );
-      }
-      
-      if (status === 401) {
-        return new IntervalsAPIError('Invalid API key or authentication failed', status, 'AUTH_FAILED');
-      }
-      
-      if (status === 404) {
-        return new IntervalsAPIError('Resource not found', status, 'NOT_FOUND');
-      }
-      
-      return new IntervalsAPIError(message, status);
-    }
-    
-    if (error.code === 'ECONNABORTED') {
-      return new IntervalsAPIError('Request timeout', undefined, 'TIMEOUT');
-    }
-    
-    return new IntervalsAPIError(error.message || 'Unknown error occurred');
-  }
-
-  /**
-   * Makes a request to the API
-   */
-  private async request<T>(config: AxiosRequestConfig): Promise<T> {
-    const response = await this.httpClient.request<T>(config);
-    return response.data;
+    return this.rateLimitTracker.getReset();
   }
 
   // ==================== ATHLETE ENDPOINTS ====================
@@ -181,11 +114,7 @@ export class IntervalsClient {
    * ```
    */
   public async getAthlete(athleteId?: string): Promise<Athlete> {
-    const id = athleteId || this.athleteId;
-    return this.request<Athlete>({
-      method: 'GET',
-      url: `/athlete/${id}`,
-    });
+    return this.athleteService.getAthlete(athleteId);
   }
 
   /**
@@ -201,12 +130,7 @@ export class IntervalsClient {
    * ```
    */
   public async updateAthlete(data: Partial<Athlete>, athleteId?: string): Promise<Athlete> {
-    const id = athleteId || this.athleteId;
-    return this.request<Athlete>({
-      method: 'PUT',
-      url: `/athlete/${id}`,
-      data,
-    });
+    return this.athleteService.updateAthlete(data, athleteId);
   }
 
   // ==================== EVENT ENDPOINTS ====================
@@ -227,12 +151,7 @@ export class IntervalsClient {
    * ```
    */
   public async getEvents(options?: PaginationOptions, athleteId?: string): Promise<Event[]> {
-    const id = athleteId || this.athleteId;
-    return this.request<Event[]>({
-      method: 'GET',
-      url: `/athlete/${id}/events`,
-      params: options,
-    });
+    return this.eventService.getEvents(options, athleteId);
   }
 
   /**
@@ -248,11 +167,7 @@ export class IntervalsClient {
    * ```
    */
   public async getEvent(eventId: number, athleteId?: string): Promise<Event> {
-    const id = athleteId || this.athleteId;
-    return this.request<Event>({
-      method: 'GET',
-      url: `/athlete/${id}/events/${eventId}`,
-    });
+    return this.eventService.getEvent(eventId, athleteId);
   }
 
   /**
@@ -272,12 +187,7 @@ export class IntervalsClient {
    * ```
    */
   public async createEvent(data: EventInput, athleteId?: string): Promise<Event> {
-    const id = athleteId || this.athleteId;
-    return this.request<Event>({
-      method: 'POST',
-      url: `/athlete/${id}/events`,
-      data,
-    });
+    return this.eventService.createEvent(data, athleteId);
   }
 
   /**
@@ -294,12 +204,7 @@ export class IntervalsClient {
    * ```
    */
   public async updateEvent(eventId: number, data: Partial<EventInput>, athleteId?: string): Promise<Event> {
-    const id = athleteId || this.athleteId;
-    return this.request<Event>({
-      method: 'PUT',
-      url: `/athlete/${id}/events/${eventId}`,
-      data,
-    });
+    return this.eventService.updateEvent(eventId, data, athleteId);
   }
 
   /**
@@ -314,11 +219,7 @@ export class IntervalsClient {
    * ```
    */
   public async deleteEvent(eventId: number, athleteId?: string): Promise<void> {
-    const id = athleteId || this.athleteId;
-    await this.request<void>({
-      method: 'DELETE',
-      url: `/athlete/${id}/events/${eventId}`,
-    });
+    return this.eventService.deleteEvent(eventId, athleteId);
   }
 
   // ==================== WELLNESS ENDPOINTS ====================
@@ -339,12 +240,7 @@ export class IntervalsClient {
    * ```
    */
   public async getWellness(options?: PaginationOptions, athleteId?: string): Promise<Wellness[]> {
-    const id = athleteId || this.athleteId;
-    return this.request<Wellness[]>({
-      method: 'GET',
-      url: `/athlete/${id}/wellness`,
-      params: options,
-    });
+    return this.wellnessService.getWellness(options, athleteId);
   }
 
   /**
@@ -365,12 +261,7 @@ export class IntervalsClient {
    * ```
    */
   public async createWellness(data: WellnessInput, athleteId?: string): Promise<Wellness> {
-    const id = athleteId || this.athleteId;
-    return this.request<Wellness>({
-      method: 'POST',
-      url: `/athlete/${id}/wellness`,
-      data,
-    });
+    return this.wellnessService.createWellness(data, athleteId);
   }
 
   /**
@@ -387,12 +278,7 @@ export class IntervalsClient {
    * ```
    */
   public async updateWellness(date: string, data: Partial<WellnessInput>, athleteId?: string): Promise<Wellness> {
-    const id = athleteId || this.athleteId;
-    return this.request<Wellness>({
-      method: 'PUT',
-      url: `/athlete/${id}/wellness/${date}`,
-      data,
-    });
+    return this.wellnessService.updateWellness(date, data, athleteId);
   }
 
   /**
@@ -407,11 +293,7 @@ export class IntervalsClient {
    * ```
    */
   public async deleteWellness(date: string, athleteId?: string): Promise<void> {
-    const id = athleteId || this.athleteId;
-    await this.request<void>({
-      method: 'DELETE',
-      url: `/athlete/${id}/wellness/${date}`,
-    });
+    return this.wellnessService.deleteWellness(date, athleteId);
   }
 
   // ==================== WORKOUT ENDPOINTS ====================
@@ -432,12 +314,7 @@ export class IntervalsClient {
    * ```
    */
   public async getWorkouts(options?: PaginationOptions, athleteId?: string): Promise<Workout[]> {
-    const id = athleteId || this.athleteId;
-    return this.request<Workout[]>({
-      method: 'GET',
-      url: `/athlete/${id}/workouts`,
-      params: options,
-    });
+    return this.workoutService.getWorkouts(options, athleteId);
   }
 
   /**
@@ -453,11 +330,7 @@ export class IntervalsClient {
    * ```
    */
   public async getWorkout(workoutId: number, athleteId?: string): Promise<Workout> {
-    const id = athleteId || this.athleteId;
-    return this.request<Workout>({
-      method: 'GET',
-      url: `/athlete/${id}/workouts/${workoutId}`,
-    });
+    return this.workoutService.getWorkout(workoutId, athleteId);
   }
 
   /**
@@ -477,12 +350,7 @@ export class IntervalsClient {
    * ```
    */
   public async createWorkout(data: WorkoutInput, athleteId?: string): Promise<Workout> {
-    const id = athleteId || this.athleteId;
-    return this.request<Workout>({
-      method: 'POST',
-      url: `/athlete/${id}/workouts`,
-      data,
-    });
+    return this.workoutService.createWorkout(data, athleteId);
   }
 
   /**
@@ -499,12 +367,7 @@ export class IntervalsClient {
    * ```
    */
   public async updateWorkout(workoutId: number, data: Partial<WorkoutInput>, athleteId?: string): Promise<Workout> {
-    const id = athleteId || this.athleteId;
-    return this.request<Workout>({
-      method: 'PUT',
-      url: `/athlete/${id}/workouts/${workoutId}`,
-      data,
-    });
+    return this.workoutService.updateWorkout(workoutId, data, athleteId);
   }
 
   /**
@@ -519,11 +382,7 @@ export class IntervalsClient {
    * ```
    */
   public async deleteWorkout(workoutId: number, athleteId?: string): Promise<void> {
-    const id = athleteId || this.athleteId;
-    await this.request<void>({
-      method: 'DELETE',
-      url: `/athlete/${id}/workouts/${workoutId}`,
-    });
+    return this.workoutService.deleteWorkout(workoutId, athleteId);
   }
 
   // ==================== ACTIVITY ENDPOINTS ====================
@@ -544,12 +403,7 @@ export class IntervalsClient {
    * ```
    */
   public async getActivities(options?: PaginationOptions, athleteId?: string): Promise<Activity[]> {
-    const id = athleteId || this.athleteId;
-    return this.request<Activity[]>({
-      method: 'GET',
-      url: `/athlete/${id}/activities`,
-      params: options,
-    });
+    return this.activityService.getActivities(options, athleteId);
   }
 
   /**
@@ -565,11 +419,7 @@ export class IntervalsClient {
    * ```
    */
   public async getActivity(activityId: number, athleteId?: string): Promise<Activity> {
-    const id = athleteId || this.athleteId;
-    return this.request<Activity>({
-      method: 'GET',
-      url: `/athlete/${id}/activities/${activityId}`,
-    });
+    return this.activityService.getActivity(activityId, athleteId);
   }
 
   /**
@@ -589,12 +439,7 @@ export class IntervalsClient {
    * ```
    */
   public async updateActivity(activityId: number, data: ActivityInput, athleteId?: string): Promise<Activity> {
-    const id = athleteId || this.athleteId;
-    return this.request<Activity>({
-      method: 'PUT',
-      url: `/athlete/${id}/activities/${activityId}`,
-      data,
-    });
+    return this.activityService.updateActivity(activityId, data, athleteId);
   }
 
   /**
@@ -609,10 +454,6 @@ export class IntervalsClient {
    * ```
    */
   public async deleteActivity(activityId: number, athleteId?: string): Promise<void> {
-    const id = athleteId || this.athleteId;
-    await this.request<void>({
-      method: 'DELETE',
-      url: `/athlete/${id}/activities/${activityId}`,
-    });
+    return this.activityService.deleteActivity(activityId, athleteId);
   }
 }

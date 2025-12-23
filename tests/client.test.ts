@@ -86,9 +86,12 @@ describe('IntervalsClient - Core Functionality', () => {
 
   describe('Error Handling', () => {
     let client: IntervalsClient;
+    let mockInstance: any;
+    let errorHandler: any;
 
     beforeEach(() => {
-      const mockInstance = {
+      mockInstance = {
+        request: vi.fn(),
         get: vi.fn(),
         post: vi.fn(),
         put: vi.fn(),
@@ -96,14 +99,20 @@ describe('IntervalsClient - Core Functionality', () => {
         interceptors: {
           request: { use: vi.fn(), eject: vi.fn() },
           response: { 
-            use: vi.fn((successHandler, errorHandler) => {
-              mockInstance._errorHandler = errorHandler;
+            use: vi.fn((successHandler, _errorHandler) => {
+              mockInstance._successHandler = successHandler;
+              errorHandler = _errorHandler;
             }),
             eject: vi.fn(),
           },
         },
-        _errorHandler: null as any,
+        _successHandler: null as any,
       };
+
+      // Make request method call error handler when rejected
+      mockInstance.request.mockImplementation(async () => {
+        throw new Error('This should be overridden in each test');
+      });
       
       mockedAxios.create = vi.fn(() => mockInstance);
 
@@ -123,65 +132,97 @@ describe('IntervalsClient - Core Functionality', () => {
         config: {} as any,
       };
 
-      vi.spyOn(client as any, 'request').mockRejectedValue(
-        new IntervalsAPIError('Unauthorized', 401, 'AUTH_FAILED')
-      );
+      mockInstance.request.mockImplementation(async () => {
+        throw await errorHandler(error);
+      });
 
       await expect(client.getAthlete()).rejects.toThrow(IntervalsAPIError);
-      await expect(client.getAthlete()).rejects.toThrow('Unauthorized');
+      await expect(client.getAthlete()).rejects.toThrow('authentication failed');
     });
 
     it('should throw IntervalsAPIError on 404 Not Found', async () => {
-      vi.spyOn(client as any, 'request').mockRejectedValue(
-        new IntervalsAPIError('Not Found', 404, 'NOT_FOUND')
-      );
+      const error = new Error('Not Found') as AxiosError;
+      error.response = {
+        status: 404,
+        data: {},
+        statusText: 'Not Found',
+        headers: {},
+        config: {} as any,
+      };
+
+      mockInstance.request.mockImplementation(async () => {
+        throw await errorHandler(error);
+      });
 
       await expect(client.getEvent(99999)).rejects.toThrow(IntervalsAPIError);
+      await expect(client.getEvent(99999)).rejects.toThrow('not found');
     });
 
     it('should throw IntervalsAPIError on 429 Rate Limit', async () => {
-      vi.spyOn(client as any, 'request').mockRejectedValue(
-        new IntervalsAPIError('Rate limit exceeded', 429, 'RATE_LIMIT_EXCEEDED')
-      );
+      const error = new Error('Too Many Requests') as AxiosError;
+      error.response = {
+        status: 429,
+        data: {},
+        statusText: 'Too Many Requests',
+        headers: {},
+        config: {} as any,
+      };
+
+      mockInstance.request.mockImplementation(async () => {
+        throw await errorHandler(error);
+      });
 
       await expect(client.getAthlete()).rejects.toThrow(IntervalsAPIError);
       await expect(client.getAthlete()).rejects.toThrow('Rate limit exceeded');
     });
 
     it('should throw IntervalsAPIError on 500 Server Error', async () => {
-      vi.spyOn(client as any, 'request').mockRejectedValue(
-        new IntervalsAPIError('Internal Server Error', 500, 'SERVER_ERROR')
-      );
+      const error = new Error('Server Error') as AxiosError;
+      error.response = {
+        status: 500,
+        data: {},
+        statusText: 'Internal Server Error',
+        headers: {},
+        config: {} as any,
+      };
+
+      mockInstance.request.mockImplementation(async () => {
+        throw await errorHandler(error);
+      });
 
       await expect(client.getAthlete()).rejects.toThrow(IntervalsAPIError);
     });
 
     it('should handle network errors', async () => {
-      vi.spyOn(client as any, 'request').mockRejectedValue(
-        new Error('Network Error')
-      );
+      const error = new Error('Network Error');
 
-      await expect(client.getAthlete()).rejects.toThrow('Network Error');
+      mockInstance.request.mockImplementation(async () => {
+        throw await errorHandler(error);
+      });
+
+      await expect(client.getAthlete()).rejects.toThrow(IntervalsAPIError);
     });
   });
 
   describe('Rate Limiting', () => {
     let client: IntervalsClient;
+    let mockInstance: any;
+    let successHandler: any;
 
     beforeEach(() => {
-      const mockInstance = {
+      mockInstance = {
+        request: vi.fn(),
         get: vi.fn(),
         interceptors: {
           request: { use: vi.fn(), eject: vi.fn() },
           response: { 
-            use: vi.fn((successHandler) => {
-              mockInstance._successHandler = successHandler;
+            use: vi.fn((_successHandler) => {
+              successHandler = _successHandler;
               return 0;
             }),
             eject: vi.fn(),
           },
         },
-        _successHandler: null as any,
       };
       
       mockedAxios.create = vi.fn(() => mockInstance);
@@ -200,11 +241,10 @@ describe('IntervalsClient - Core Functionality', () => {
         },
       };
 
-      vi.spyOn(client as any, 'request').mockImplementation(async () => {
-        // Simulate rate limit update
-        (client as any).rateLimitRemaining = 98;
-        (client as any).rateLimitReset = new Date(1640000000 * 1000);
-        return mockResponse.data;
+      mockInstance.request.mockImplementation(async () => {
+        // Call success handler to trigger rate limit tracking
+        successHandler(mockResponse);
+        return mockResponse;
       });
 
       await client.getAthlete();
@@ -246,22 +286,46 @@ describe('IntervalsClient - Core Functionality', () => {
     });
 
     it('should be catchable as IntervalsAPIError', async () => {
-      const client = new IntervalsClient({
+      let errorHandler: any;
+      const mockInstance = {
+        request: vi.fn(),
+        interceptors: {
+          request: { use: vi.fn(), eject: vi.fn() },
+          response: { 
+            use: vi.fn((successHandler, _errorHandler) => {
+              errorHandler = _errorHandler;
+            }),
+            eject: vi.fn(),
+          },
+        },
+      };
+      
+      mockedAxios.create = vi.fn(() => mockInstance);
+      
+      const testClient = new IntervalsClient({
         apiKey: 'test-api-key',
       });
 
-      vi.spyOn(client as any, 'request').mockRejectedValue(
-        new IntervalsAPIError('Test error', 400, 'TEST_ERROR')
-      );
+      const axiosError = new Error('Test error') as AxiosError;
+      axiosError.response = {
+        status: 400,
+        data: { message: 'Test error' },
+        statusText: 'Bad Request',
+        headers: {},
+        config: {} as any,
+      };
+
+      mockInstance.request.mockImplementation(async () => {
+        throw await errorHandler(axiosError);
+      });
 
       try {
-        await client.getAthlete();
+        await testClient.getAthlete();
         expect.fail('Should have thrown error');
       } catch (error) {
         expect(error).toBeInstanceOf(IntervalsAPIError);
         if (error instanceof IntervalsAPIError) {
           expect(error.status).toBe(400);
-          expect(error.code).toBe('TEST_ERROR');
         }
       }
     });

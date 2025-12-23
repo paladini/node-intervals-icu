@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { IntervalsClient } from '../src/client.js';
 import { mockWorkout, mockWorkouts } from './fixtures/workouts.js';
+import { setupAxiosMock } from './helpers/mock-axios.js';
 
 // Mock axios
 vi.mock('axios');
@@ -11,27 +12,8 @@ describe('IntervalsClient - Workouts', () => {
   let client: IntervalsClient;
 
   beforeEach(() => {
-    // Create axios instance mock
-    const mockInstance = {
-      get: vi.fn(),
-      post: vi.fn(),
-      put: vi.fn(),
-      delete: vi.fn(),
-      interceptors: {
-        request: { use: vi.fn(), eject: vi.fn() },
-        response: { use: vi.fn(), eject: vi.fn() },
-      },
-    };
-    
-    mockedAxios.create = vi.fn(() => mockInstance);
-
-    client = new IntervalsClient({
-      apiKey: 'test-api-key',
-      athleteId: 'test-athlete-id',
-    });
-
-    // Setup default mock for the request method
-    vi.spyOn(client as any, 'request').mockImplementation(async (config: any) => {
+    // Setup axios mock with request handler
+    setupAxiosMock(mockedAxios, async (config: any) => {
       if (config.url.includes('/workouts') && config.method === 'GET') {
         if (config.url.match(/\/workouts\/\d+$/)) {
           return mockWorkout;
@@ -48,6 +30,11 @@ describe('IntervalsClient - Workouts', () => {
         return;
       }
       return [];
+    });
+
+    client = new IntervalsClient({
+      apiKey: 'test-api-key',
+      athleteId: 'test-athlete-id',
     });
   });
 
