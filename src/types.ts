@@ -49,6 +49,10 @@ export interface Event {
   description?: string;
   color?: string;
   show_as_note?: boolean;
+  athlete_cannot_edit?: boolean;
+  hide_from_athlete?: boolean;
+  external_id?: string;
+  uid?: string;
   created?: string;
   updated?: string;
 }
@@ -152,6 +156,148 @@ export interface Activity {
   updated?: string;
 }
 
+// ==================== ACTIVITY STREAMS TYPES ====================
+
+/**
+ * Activity Stream data
+ * Represents time-series data for an activity (power, heart rate, cadence, etc.)
+ */
+export interface ActivityStream {
+  /** Stream type (e.g., 'watts', 'heartrate', 'cadence', 'speed', 'distance', 'altitude', 'latlng', 'time', 'moving') */
+  type: string;
+  /** Data points as an array of values */
+  data: number[] | number[][];
+  /** Sample rate in Hz (if applicable) */
+  sample_rate?: number;
+}
+
+/**
+ * Available stream types for activities
+ */
+export type StreamType =
+  | 'watts'            // Power in watts
+  | 'heartrate'        // Heart rate in bpm
+  | 'cadence'          // Cadence in rpm
+  | 'speed'            // Speed in m/s
+  | 'distance'         // Distance in meters
+  | 'altitude'         // Altitude in meters
+  | 'latlng'           // GPS coordinates [latitude, longitude]
+  | 'time'             // Time in seconds
+  | 'moving'           // Moving state (boolean as 0/1)
+  | 'grade'            // Grade percentage
+  | 'velocity_smooth'  // Smoothed velocity in m/s
+  | 'temp'             // Temperature in Celsius
+  | 'watts_left'       // Left balance power
+  | 'watts_right'      // Right balance power
+  | 'watts_sample';    // Sample rate for power
+
+/**
+ * Options for getting activity streams
+ */
+export interface StreamsOptions {
+  /** Comma-separated list of stream types to retrieve */
+  types?: StreamType | StreamType[];
+  /** Include default stream types */
+  includeDefaults?: boolean;
+  /** Return data in CSV format (instead of JSON) */
+  format?: 'json' | 'csv';
+}
+
+/**
+ * Result of updating streams
+ */
+export interface UpdateStreamsResult {
+  success: boolean;
+  updated: string[];
+  errors?: string[];
+}
+
+// ==================== ACTIVITY INTERVALS TYPES ====================
+
+/**
+ * Activity Interval/Lap data
+ */
+export interface Interval {
+  id?: number;
+  /** Interval start index in the stream data */
+  start_index: number;
+  /** Interval end index in the stream data */
+  end_index: number;
+  /** Interval duration in seconds */
+  elapsed_time?: number;
+  /** Moving time in seconds */
+  moving_time?: number;
+  /** Distance in meters */
+  distance?: number;
+  /** Average power in watts */
+  average_watts?: number;
+  /** Average heart rate in bpm */
+  average_heartrate?: number;
+  /** Average cadence in rpm */
+  average_cadence?: number;
+  /** Max power in watts */
+  max_watts?: number;
+  /** Max heart rate in bpm */
+  max_heartrate?: number;
+  /** TSS score */
+  tss?: number;
+  /** Normalized power */
+  np?: number;
+  /** Intensity factor */
+  intensity?: number;
+  /** Name/description of the interval */
+  name?: string;
+}
+
+/**
+ * Response containing activity intervals
+ */
+export interface IntervalsDTO {
+  activity_id: string;
+  intervals: Interval[];
+  /** Count of intervals */
+  count: number;
+}
+
+/**
+ * Options for updating intervals
+ */
+export interface UpdateIntervalsOptions {
+  /** Replace all existing intervals (default: true) */
+  all?: boolean;
+}
+
+// ==================== BULK OPERATIONS TYPES ====================
+
+/**
+ * Event for bulk deletion
+ */
+export interface DoomedEvent {
+  id?: number;
+  external_id?: string;
+}
+
+/**
+ * Response from bulk event deletion
+ */
+export interface DeleteEventsResponse {
+  deleted: number;
+  ids: number[];
+  external_ids: string[];
+}
+
+/**
+ * Options for creating events in bulk
+ */
+export interface BulkEventInput extends EventInput {
+  /** External ID for upsert operations */
+  external_id?: string;
+  /** Unique identifier for upsert */
+  uid?: string;
+}
+
+// ==================== ORIGINAL TYPES ====================
+
 /**
  * Configuration for the Intervals.icu client
  */
@@ -160,17 +306,17 @@ export interface IntervalsConfig {
    * API key for authentication
    */
   apiKey: string;
-  
+
   /**
    * Athlete ID (defaults to 'me' for the authenticated athlete)
    */
   athleteId?: string;
-  
+
   /**
    * Base URL for the API (defaults to https://intervals.icu/api/v1)
    */
   baseURL?: string;
-  
+
   /**
    * Request timeout in milliseconds (defaults to 10000)
    */
@@ -194,17 +340,17 @@ export interface PaginationOptions {
    * Oldest date to return (ISO 8601 format)
    */
   oldest?: string;
-  
+
   /**
    * Newest date to return (ISO 8601 format)
    */
   newest?: string;
-  
+
   /**
    * Limit the number of results
    */
   limit?: number;
-  
+
   /**
    * Offset for pagination
    */
