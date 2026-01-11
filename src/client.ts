@@ -12,6 +12,15 @@ import type {
   Activity,
   ActivityInput,
   PaginationOptions,
+  ActivityStream,
+  StreamsOptions,
+  UpdateStreamsResult,
+  Interval,
+  IntervalsDTO,
+  UpdateIntervalsOptions,
+  BulkEventInput,
+  DoomedEvent,
+  DeleteEventsResponse,
 } from './types.js';
 
 /**
@@ -599,10 +608,10 @@ export class IntervalsClient {
 
   /**
    * Deletes an activity
-   * 
+   *
    * @param activityId - Activity ID
    * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * 
+   *
    * @example
    * ```typescript
    * await client.deleteActivity(12345);
@@ -613,6 +622,465 @@ export class IntervalsClient {
     await this.request<void>({
       method: 'DELETE',
       url: `/athlete/${id}/activities/${activityId}`,
+    });
+  }
+
+  // ==================== ACTIVITY STREAMS ENDPOINTS ====================
+
+  /**
+   * Gets activity streams (time-series data)
+   *
+   * @param activityId - Activity ID
+   * @param options - Stream options (types, format, etc.)
+   * @returns Array of activity streams with data
+   *
+   * @example
+   * ```typescript
+   * // Get all streams for an activity
+   * const streams = await client.getActivityStreams(12345);
+   *
+   * // Get specific stream types
+   * const powerAndHr = await client.getActivityStreams(12345, {
+   *   types: ['watts', 'heartrate']
+   * });
+   *
+   * // Get streams as CSV
+   * const csvData = await client.getActivityStreams(12345, {
+   *   types: 'watts',
+   *   format: 'csv'
+   * });
+   * ```
+   */
+  public async getActivityStreams(
+    activityId: number,
+    options?: StreamsOptions
+  ): Promise<ActivityStream[]> {
+    const params: Record<string, string | boolean> = {};
+
+    if (options?.types) {
+      if (Array.isArray(options.types)) {
+        params.types = options.types.join(',');
+      } else {
+        params.types = options.types;
+      }
+    }
+    if (options?.includeDefaults !== undefined) {
+      params.includeDefaults = options.includeDefaults;
+    }
+
+    const extension = options?.format === 'csv' ? '.csv' : '.json';
+    return this.request<ActivityStream[]>({
+      method: 'GET',
+      url: `/activity/${activityId}/streams${extension}`,
+      params,
+    });
+  }
+
+  /**
+   * Updates activity streams from JSON
+   *
+   * @param activityId - Activity ID
+   * @param streams - Array of streams to update
+   * @returns Update result
+   *
+   * @example
+   * ```typescript
+   * const result = await client.updateActivityStreams(12345, [
+   *   { type: 'watts', data: [100, 150, 200, ...] },
+   *   { type: 'heartrate', data: [120, 130, 140, ...] }
+   * ]);
+   * ```
+   */
+  public async updateActivityStreams(
+    activityId: number,
+    streams: ActivityStream[]
+  ): Promise<UpdateStreamsResult> {
+    return this.request<UpdateStreamsResult>({
+      method: 'PUT',
+      url: `/activity/${activityId}/streams`,
+      data: streams,
+    });
+  }
+
+  /**
+   * Updates activity streams from CSV
+   *
+   * @param activityId - Activity ID
+   * @param csvFile - CSV file content (multipart form data)
+   * @returns Update result
+   *
+   * @example
+   * ```typescript
+   * const formData = new FormData();
+   * formData.append('file', csvFileBlob);
+   * const result = await client.updateActivityStreamsFromCSV(12345, formData);
+   * ```
+   */
+  public async updateActivityStreamsFromCSV(
+    activityId: number,
+    csvFile: FormData
+  ): Promise<UpdateStreamsResult> {
+    const response = await this.httpClient.request<UpdateStreamsResult>({
+      method: 'PUT',
+      url: `/activity/${activityId}/streams.csv`,
+      data: csvFile,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  }
+
+  // ==================== ACTIVITY INTERVALS ENDPOINTS ====================
+
+  /**
+   * Gets activity intervals/laps
+   *
+   * @param activityId - Activity ID
+   * @returns Intervals data with laps
+   *
+   * @example
+   * ```typescript
+   * const intervals = await client.getActivityIntervals(12345);
+   * console.log(`Found ${intervals.count} intervals`);
+   * intervals.intervals.forEach(interval => {
+   *   console.log(`${interval.name}: ${interval.average_watts}W avg`);
+   * });
+   * ```
+   */
+  public async getActivityIntervals(activityId: number): Promise<IntervalsDTO> {
+    return this.request<IntervalsDTO>({
+      method: 'GET',
+      url: `/activity/${activityId}/intervals`,
+    });
+  }
+
+  /**
+   * Updates activity intervals
+   *
+   * @param activityId - Activity ID
+   * @param intervals - Array of intervals to set
+   * @param options - Update options (all=true replaces all intervals)
+   * @returns Updated intervals data
+   *
+   * @example
+   * ```typescript
+   * const intervals = await client.updateActivityIntervals(12345, [
+   *   {
+   *     start_index: 0,
+   *     end_index: 600,
+   *     name: 'Warm up',
+   *     elapsed_time: 600
+   *   },
+   *   {
+   *     start_index: 600,
+   *     end_index: 1800,
+   *     name: 'Main set',
+   *     elapsed_time: 1200
+   *   }
+   * ], { all: true });
+   * ```
+   */
+  public async updateActivityIntervals(
+    activityId: number,
+    intervals: Interval[],
+    options?: UpdateIntervalsOptions
+  ): Promise<IntervalsDTO> {
+    const params: Record<string, boolean> = {};
+    if (options?.all !== undefined) {
+      params.all = options.all;
+    }
+
+    return this.request<IntervalsDTO>({
+      method: 'PUT',
+      url: `/activity/${activityId}/intervals`,
+      params,
+      data: intervals,
+    });
+  }
+
+  /**
+   * Deletes specific intervals from an activity
+   *
+   * @param activityId - Activity ID
+   * @param intervals - Intervals to delete
+   * @returns Remaining intervals
+   *
+   * @example
+   * ```typescript
+   * const result = await client.deleteActivityIntervals(12345, [
+   *   { id: 1, start_index: 0, end_index: 600 },
+   *   { id: 2, start_index: 600, end_index: 1200 }
+   * ]);
+   * ```
+   */
+  public async deleteActivityIntervals(
+    activityId: number,
+    intervals: Interval[]
+  ): Promise<IntervalsDTO> {
+    return this.request<IntervalsDTO>({
+      method: 'PUT',
+      url: `/activity/${activityId}/delete-intervals`,
+      data: intervals,
+    });
+  }
+
+  /**
+   * Splits an interval at a specific index
+   *
+   * @param activityId - Activity ID
+   * @param splitAt - Index to split the interval at
+   * @returns Updated intervals
+   *
+   * @example
+   * ```typescript
+   * const result = await client.splitInterval(12345, 600);
+   * ```
+   */
+  public async splitInterval(
+    activityId: number,
+    splitAt: number
+  ): Promise<IntervalsDTO> {
+    return this.request<IntervalsDTO>({
+      method: 'PUT',
+      url: `/activity/${activityId}/split-interval`,
+      params: { splitAt },
+    });
+  }
+
+  /**
+   * Updates or creates a specific interval
+   *
+   * @param activityId - Activity ID
+   * @param intervalId - Interval ID
+   * @param interval - Interval data
+   * @returns Updated intervals
+   *
+   * @example
+   * ```typescript
+   * const result = await client.updateInterval(12345, 1, {
+   *   start_index: 0,
+   *   end_index: 600,
+   *   name: 'Updated interval name'
+   * });
+   * ```
+   */
+  public async updateInterval(
+    activityId: number,
+    intervalId: number,
+    interval: Interval
+  ): Promise<IntervalsDTO> {
+    return this.request<IntervalsDTO>({
+      method: 'PUT',
+      url: `/activity/${activityId}/intervals/${intervalId}`,
+      data: interval,
+    });
+  }
+
+  /**
+   * Gets activity with intervals included
+   *
+   * @param activityId - Activity ID
+   * @returns Activity with intervals data
+   *
+   * @example
+   * ```typescript
+   * const activity = await client.getActivityWithIntervals(12345);
+   * console.log(activity.name, activity.intervals);
+   * ```
+   */
+  public async getActivityWithIntervals(
+    activityId: number
+  ): Promise<Activity & { intervals?: Interval[] }> {
+    return this.request<Activity & { intervals?: Interval[] }>({
+      method: 'GET',
+      url: `/activity/${activityId}`,
+      params: { intervals: true },
+    });
+  }
+
+  // ==================== BULK EVENTS OPERATIONS ====================
+
+  /**
+   * Creates multiple events at once
+   *
+   * @param events - Array of events to create
+   * @param athleteId - Athlete ID (defaults to configured athlete)
+   * @param options - Bulk options (upsertOnUid)
+   * @returns Array of created events
+   *
+   * @example
+   * ```typescript
+   * const events = await client.createEventsBulk([
+   *   {
+   *     start_date_local: '2024-01-15',
+   *     name: 'Morning Workout',
+   *     category: 'WORKOUT'
+   *   },
+   *   {
+   *     start_date_local: '2024-01-16',
+   *     name: 'Evening Workout',
+   *     category: 'WORKOUT'
+   *   }
+   * ]);
+   * ```
+   */
+  public async createEventsBulk(
+    events: BulkEventInput[],
+    athleteId?: string,
+    options?: { upsertOnUid?: boolean }
+  ): Promise<Event[]> {
+    const id = athleteId || this.athleteId;
+    const params: Record<string, boolean> = {};
+    if (options?.upsertOnUid !== undefined) {
+      params.upsertOnUid = options.upsertOnUid;
+    }
+
+    // Use Promise.all to create all events in parallel
+    const promises = events.map(event =>
+      this.request<Event>({
+        method: 'POST',
+        url: `/athlete/${id}/events`,
+        params,
+        data: event,
+      })
+    );
+
+    return Promise.all(promises);
+  }
+
+  /**
+   * Deletes multiple events by ID or external_id
+   *
+   * @param doomedEvents - Array of events to delete (with id or external_id)
+   * @param athleteId - Athlete ID (defaults to configured athlete)
+   * @returns Delete response with deleted count and IDs
+   *
+   * @example
+   * ```typescript
+   * // Delete by internal IDs
+   * const result = await client.deleteEventsBulk([
+   *   { id: 12345 },
+   *   { id: 12346 }
+   * ]);
+   *
+   * // Delete by external IDs
+   * const result = await client.deleteEventsBulk([
+   *   { external_id: 'ext-001' },
+   *   { external_id: 'ext-002' }
+   * ]);
+   * ```
+   */
+  public async deleteEventsBulk(
+    doomedEvents: DoomedEvent[],
+    athleteId?: string
+  ): Promise<DeleteEventsResponse> {
+    const id = athleteId || this.athleteId;
+    return this.request<DeleteEventsResponse>({
+      method: 'PUT',
+      url: `/athlete/${id}/events/bulk-delete`,
+      data: doomedEvents,
+    });
+  }
+
+  /**
+   * Deletes a range of events by category
+   *
+   * @param options - Delete options (oldest, newest, category, etc.)
+   * @param athleteId - Athlete ID (defaults to configured athlete)
+   *
+   * @example
+   * ```typescript
+   * // Delete all workouts in January 2024
+   * await client.deleteEventsRange({
+   *   oldest: '2024-01-01',
+   *   newest: '2024-01-31',
+   *   category: ['WORKOUT']
+   * });
+   *
+   * // Delete all future events created by specific athlete
+   * await client.deleteEventsRange({
+   *   oldest: new Date().toISOString().split('T')[0],
+   *   category: ['WORKOUT', 'NOTE'],
+   *   createdById: 'coach_athlete_id'
+   * });
+   * ```
+   */
+  public async deleteEventsRange(
+    options: {
+      oldest: string;
+      newest?: string;
+      category: string[];
+      createdById?: string;
+    },
+    athleteId?: string
+  ): Promise<void> {
+    const id = athleteId || this.athleteId;
+    await this.request<void>({
+      method: 'DELETE',
+      url: `/athlete/${id}/events`,
+      params: options,
+    });
+  }
+
+  /**
+   * Updates multiple events in a date range at once
+   * Only hide_from_athlete and athlete_cannot_edit can be updated
+   *
+   * @param oldest - Oldest date to update (ISO-8601)
+   * @param newest - Newest date to update (ISO-8601)
+   * @param data - Event data to update (only hide_from_athlete, athlete_cannot_edit)
+   * @param athleteId - Athlete ID (defaults to configured athlete)
+   * @returns Array of updated events
+   *
+   * @example
+   * ```typescript
+   * const updated = await client.updateEventsRange(
+   *   '2024-01-01',
+   *   '2024-01-31',
+   *   { hide_from_athlete: true }
+   * );
+   * ```
+   */
+  public async updateEventsRange(
+    oldest: string,
+    newest: string,
+    data: Partial<Pick<Event, 'hide_from_athlete' | 'athlete_cannot_edit'>>,
+    athleteId?: string
+  ): Promise<Event[]> {
+    const id = athleteId || this.athleteId;
+    return this.request<Event[]>({
+      method: 'PUT',
+      url: `/athlete/${id}/events`,
+      params: { oldest, newest },
+      data,
+    });
+  }
+
+  /**
+   * Updates wellness records in bulk
+   *
+   * @param wellnessRecords - Array of wellness records to update
+   * @param athleteId - Athlete ID (defaults to configured athlete)
+   *
+   * @example
+   * ```typescript
+   * await client.updateWellnessBulk([
+   *   { id: '2024-01-15', weight: 70.5, restingHR: 52 },
+   *   { id: '2024-01-16', weight: 70.3, restingHR: 51 },
+   *   { id: '2024-01-17', weight: 70.1, restingHR: 50 }
+   * ]);
+   * ```
+   */
+  public async updateWellnessBulk(
+    wellnessRecords: Wellness[],
+    athleteId?: string
+  ): Promise<void> {
+    const id = athleteId || this.athleteId;
+    await this.request<void>({
+      method: 'PUT',
+      url: `/athlete/${id}/wellness-bulk`,
+      data: wellnessRecords,
     });
   }
 }

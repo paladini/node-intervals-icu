@@ -1,8 +1,8 @@
 /**
  * node-intervals-icu
- * 
+ *
  * A lightweight TypeScript client library for the Intervals.icu API.
- * 
+ *
  * @packageDocumentation
  */
 
@@ -20,4 +20,17 @@ export type {
   Activity,
   ActivityInput,
   PaginationOptions,
+  // Activity Streams
+  ActivityStream,
+  StreamType,
+  StreamsOptions,
+  UpdateStreamsResult,
+  // Activity Intervals
+  Interval,
+  IntervalsDTO,
+  UpdateIntervalsOptions,
+  // Bulk Operations
+  BulkEventInput,
+  DoomedEvent,
+  DeleteEventsResponse,
 } from './types.js';
