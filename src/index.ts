@@ -28,4 +28,5 @@ export type {
   Activity,
   ActivityInput,
   PaginationOptions,
+  SportSettings,
 } from './types.js';

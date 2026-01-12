@@ -49,6 +49,7 @@ export interface Event {
   description?: string;
   color?: string;
   show_as_note?: boolean;
+  workout_doc?: any; // Contains the structured workout data
   created?: string;
   updated?: string;
 }
@@ -160,17 +161,17 @@ export interface IntervalsConfig {
    * API key for authentication
    */
   apiKey: string;
-  
+
   /**
    * Athlete ID (defaults to 'me' for the authenticated athlete)
    */
   athleteId?: string;
-  
+
   /**
    * Base URL for the API (defaults to https://intervals.icu/api/v1)
    */
   baseURL?: string;
-  
+
   /**
    * Request timeout in milliseconds (defaults to 10000)
    */
@@ -194,21 +195,38 @@ export interface PaginationOptions {
    * Oldest date to return (ISO 8601 format)
    */
   oldest?: string;
-  
+
   /**
    * Newest date to return (ISO 8601 format)
    */
   newest?: string;
-  
+
   /**
    * Limit the number of results
    */
   limit?: number;
-  
+
   /**
    * Offset for pagination
    */
   offset?: number;
+
+  /**
+   * Resolve nested objects (e.g. pace values in workouts)
+   */
+  resolve?: boolean;
+}
+
+/**
+ * Sport Settings (Thresholds, Zones, etc.)
+ */
+export interface SportSettings {
+  id: string;
+  types: string[];
+  threshold_pace?: number; // m/s
+  threshold_power?: number;
+  threshold_hr?: number;
+  // Add other fields as needed
 }
 
 /**
@@ -230,3 +248,4 @@ export type WorkoutInput = Omit<Workout, 'id' | 'athlete_id' | 'created' | 'upda
  * Options for updating an activity
  */
 export type ActivityInput = Partial<Omit<Activity, 'id' | 'athlete_id' | 'created' | 'updated'>>;
+

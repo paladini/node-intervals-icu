@@ -10,6 +10,7 @@ import type {
   Activity,
   ActivityInput,
   PaginationOptions,
+  SportSettings,
 } from './types.js';
 import { AxiosHttpClient } from './core/axios-http-client.js';
 import { ErrorHandler } from './core/error-handler.js';
@@ -67,7 +68,7 @@ export class IntervalsClient {
    */
   constructor(config: IntervalsConfig) {
     const athleteId = config.athleteId || 'me';
-    
+
     // Initialize core services following Dependency Inversion Principle
     this.rateLimitTracker = new RateLimitTracker();
     const errorHandler = new ErrorHandler();
@@ -131,6 +132,23 @@ export class IntervalsClient {
    */
   public async updateAthlete(data: Partial<Athlete>, athleteId?: string): Promise<Athlete> {
     return this.athleteService.updateAthlete(data, athleteId);
+  }
+
+  /**
+   * Gets sport settings (thresholds, zones) for an athlete
+   * 
+   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
+   * @returns Array of SportSettings (one for each sport type group)
+   * 
+   * @example
+   * ```typescript
+   * const settings = await client.getSportSettings();
+   * const runSettings = settings.find(s => s.types.includes('Run'));
+   * console.log(runSettings.threshold_pace);
+   * ```
+   */
+  public async getSportSettings(athleteId?: string): Promise<SportSettings[]> {
+    return this.athleteService.getSportSettings(athleteId);
   }
 
   // ==================== EVENT ENDPOINTS ====================

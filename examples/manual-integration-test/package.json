@@ -1,0 +1,17 @@
+{
+  "name": "integration-test",
+  "version": "1.0.0",
+  "description": "Manual integration test for node-intervals-icu",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "npm run build && node dist/index.js"
+  },
+  "dependencies": {
+    "intervals-icu": "file:../../"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.1",
+    "typescript": "^5.3.2"
+  }
+}
