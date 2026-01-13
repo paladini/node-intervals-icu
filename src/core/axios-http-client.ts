@@ -17,11 +17,22 @@ export class AxiosHttpClient implements IHttpClient {
     this.errorHandler = errorHandler;
     this.rateLimitTracker = rateLimitTracker;
 
+    const authString = `API_KEY:${config.apiKey}`;
+    let encodedAuth: string;
+
+    if (typeof window !== 'undefined' && window.btoa) {
+      // Browser
+      encodedAuth = window.btoa(authString);
+    } else {
+      // Node
+      encodedAuth = Buffer.from(authString).toString('base64');
+    }
+
     this.client = axios.create({
       baseURL: config.baseURL || 'https://intervals.icu/api/v1',
       timeout: config.timeout || 10000,
       headers: {
-        'Authorization': `Basic ${Buffer.from(`API_KEY:${config.apiKey}`).toString('base64')}`,
+        'Authorization': `Basic ${encodedAuth}`,
         'Content-Type': 'application/json',
       },
     });
