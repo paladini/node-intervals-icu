@@ -8,12 +8,15 @@ import type { RateLimitTracker } from './rate-limit-tracker.js';
 export class IntervalsAPIError extends Error implements APIError {
   status?: number;
   code?: string;
+  /** Seconds to wait before retrying, from the Retry-After header */
+  retryAfter?: number;
 
-  constructor(message: string, status?: number, code?: string) {
+  constructor(message: string, status?: number, code?: string, retryAfter?: number) {
     super(message);
     this.name = 'IntervalsAPIError';
     this.status = status;
     this.code = code;
+    this.retryAfter = retryAfter;
     Object.setPrototypeOf(this, IntervalsAPIError.prototype);
   }
 }
@@ -30,10 +33,25 @@ export class ErrorHandler {
       
       if (status === 429) {
         const resetTime = rateLimitTracker.getReset();
+        const retryAfterHeader = error.response?.headers?.['retry-after'];
+        let retryAfter: number | undefined;
+        if (typeof retryAfterHeader === 'string') {
+          const seconds = parseInt(retryAfterHeader, 10);
+          if (Number.isFinite(seconds)) {
+            retryAfter = seconds;
+          } else {
+            // HTTP-date format (e.g. 'Wed, 21 Oct 2015 07:28:00 GMT')
+            const date = Date.parse(retryAfterHeader);
+            if (!isNaN(date)) {
+              retryAfter = Math.max(0, Math.round((date - Date.now()) / 1000));
+            }
+          }
+        }
         return new IntervalsAPIError(
           `Rate limit exceeded. ${resetTime ? `Resets at ${resetTime.toISOString()}` : ''}`,
           status,
-          'RATE_LIMIT_EXCEEDED'
+          'RATE_LIMIT_EXCEEDED',
+          retryAfter
         );
       }
       
