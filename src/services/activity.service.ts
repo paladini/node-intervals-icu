@@ -33,7 +33,7 @@ export class ActivityService {
 
   /** Upload a new activity from file (fit, tcx, gpx, or zip/gz) */
   async uploadActivity(
-    file: Buffer | Blob | NodeJS.ReadableStream,
+    file: Buffer | Blob | Uint8Array,
     fileName: string,
     options?: UploadActivityOptions,
     athleteId?: string
@@ -102,7 +102,7 @@ export class ActivityService {
   }
 
   /** Upload activity streams CSV */
-  async updateStreamsCSV(activityId: string, file: Buffer | Blob | NodeJS.ReadableStream, fileName: string): Promise<UpdateStreamsResult> {
+  async updateStreamsCSV(activityId: string, file: Buffer | Blob | Uint8Array, fileName: string): Promise<UpdateStreamsResult> {
     return this.httpClient.upload<UpdateStreamsResult>({ url: `/activity/${activityId}/streams.csv`, file, fileName });
   }
 

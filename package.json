@@ -1,6 +1,6 @@
 {
   "name": "intervals-icu",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Comprehensive TypeScript client library for the Intervals.icu API — 100+ endpoints, full type safety, OAuth & API key auth",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -52,8 +52,7 @@
   },
   "homepage": "https://github.com/paladini/node-intervals-icu#readme",
   "dependencies": {
-    "axios": "^1.6.0",
-    "form-data": "^4.0.5"
+    "axios": "^1.6.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

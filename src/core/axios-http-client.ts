@@ -111,14 +111,16 @@ export class AxiosHttpClient implements IHttpClient {
 
   async upload<T>(config: UploadConfig): Promise<T> {
     return this.withRetry(async () => {
-      const FormData = (await import('form-data')).default;
       const form = new FormData();
-      form.append(config.fieldName || 'file', config.file, { filename: config.fileName });
+      const blob = config.file instanceof Blob
+        ? config.file
+        : new Blob([config.file]);
+      form.append(config.fieldName || 'file', blob, config.fileName);
 
       const response = await this.client.post<T>(config.url, form, {
         params: config.params,
         headers: {
-          ...form.getHeaders(),
+          'Content-Type': 'multipart/form-data',
         },
         maxContentLength: Infinity,
         maxBodyLength: Infinity,

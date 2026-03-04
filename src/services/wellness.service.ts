@@ -44,7 +44,7 @@ export class WellnessService {
   }
 
   /** Upload wellness data from CSV file */
-  async uploadWellnessCSV(file: Buffer | Blob | NodeJS.ReadableStream, fileName: string, athleteId?: string): Promise<Wellness[]> {
+  async uploadWellnessCSV(file: Buffer | Blob | Uint8Array, fileName: string, athleteId?: string): Promise<Wellness[]> {
     const id = athleteId || this.defaultAthleteId;
     return this.httpClient.upload<Wellness[]>({ url: `/athlete/${id}/wellness`, file, fileName });
   }

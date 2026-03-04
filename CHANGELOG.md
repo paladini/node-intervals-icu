@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.1] - 2025-03-04
+
+### Changed
+- **Dropped `form-data` dependency** — file uploads now use the native `FormData` API (Node 18+), removing 1 direct dependency and its transitives
+- Upload method signatures changed from `Buffer | Blob | NodeJS.ReadableStream` to `Buffer | Blob | Uint8Array` (affects `uploadActivity`, `updateStreamsCSV`, `uploadWellnessCSV`, `importWorkout`, `uploadImage`)
+
 ## [2.2.0] - 2025-03-04
 
 ### Added

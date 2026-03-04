@@ -47,7 +47,7 @@ export class CustomItemService {
   }
 
   /** Upload an image for a custom item */
-  async uploadImage(itemId: number, file: Buffer | Blob | NodeJS.ReadableStream, fileName: string, athleteId?: string): Promise<CustomItem> {
+  async uploadImage(itemId: number, file: Buffer | Blob | Uint8Array, fileName: string, athleteId?: string): Promise<CustomItem> {
     const id = athleteId || this.defaultAthleteId;
     return this.httpClient.upload<CustomItem>({ url: `/athlete/${id}/custom-item/${itemId}/image`, file, fileName });
   }

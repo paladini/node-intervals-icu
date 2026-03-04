@@ -22,7 +22,7 @@ export interface HttpHeaders {
  */
 export interface UploadConfig {
   url: string;
-  file: Buffer | Blob | NodeJS.ReadableStream;
+  file: Buffer | Blob | Uint8Array;
   fileName: string;
   params?: Record<string, unknown>;
   fieldName?: string;

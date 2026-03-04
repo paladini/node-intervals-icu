@@ -53,7 +53,7 @@ export class FolderService {
   }
 
   /** Import a workout file (.zwo, .mrc, .erg, .fit) into a folder */
-  async importWorkout(folderId: number, file: Buffer | Blob | NodeJS.ReadableStream, fileName: string, athleteId?: string): Promise<Workout> {
+  async importWorkout(folderId: number, file: Buffer | Blob | Uint8Array, fileName: string, athleteId?: string): Promise<Workout> {
     const id = athleteId || this.defaultAthleteId;
     return this.httpClient.upload<Workout>({ url: `/athlete/${id}/folders/${folderId}/import-workout`, file, fileName });
   }
