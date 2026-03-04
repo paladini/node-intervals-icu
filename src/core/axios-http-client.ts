@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
 import type { IHttpClient, HttpRequestConfig, UploadConfig } from './http-client.interface.js';
 import type { IntervalsConfig } from '../types/index.js';
-import { ErrorHandler } from './error-handler.js';
+import { ErrorHandler, IntervalsAPIError } from './error-handler.js';
 import { RateLimitTracker } from './rate-limit-tracker.js';
 
 const DEFAULT_MAX_RETRIES = 3;
@@ -84,7 +84,10 @@ export class AxiosHttpClient implements IHttpClient {
           throw error;
         }
 
-        const delay = this.retryDelayMs * Math.pow(2, attempt);
+        const retryAfter = error instanceof IntervalsAPIError ? error.retryAfter : undefined;
+        const delay = typeof retryAfter === 'number' && retryAfter > 0
+          ? retryAfter * 1000
+          : this.retryDelayMs * Math.pow(2, attempt) * (0.5 + Math.random() * 0.5);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }

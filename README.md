@@ -183,6 +183,28 @@ MIT License - Copyright (c) 2025 Fernando Paladini
 
 See the [LICENSE](./LICENSE) file for details.
 
+## Related Projects
+
+The TypeScript/Node.js ecosystem has a few Intervals.icu API clients worth knowing about:
+
+| Library | npm | Approach | Coverage | Error handling |
+|---------|-----|----------|----------|---------------|
+| **intervals-icu** *(this library)* | `intervals-icu` | axios, TypeScript types | 16 services, 100+ endpoints | throws `IntervalsAPIError` |
+| **@kuranov/intervals-client** | `@kuranov/intervals-client` | ky + Valibot runtime validation | 6 resources (~64 endpoints) | `Result<T, E>` — never throws |
+
+**When to use `intervals-icu` (this library):**
+- You need the broadest API coverage (16 service groups including routes, gear, weather, custom items, fitness, performance, and search)
+- You prefer familiar `try/catch` error handling
+- You want a well-established npm package
+
+**When to use `@kuranov/intervals-client`:**
+- You want runtime validation of API responses via [Valibot](https://valibot.dev) (catches unexpected API changes at runtime)
+- You prefer the `Result<T, E>` pattern (no exceptions thrown)
+- You want lifecycle hooks for observability (`onRequest`, `onResponse`, `onRetry`)
+- You target browsers or edge runtimes (uses `ky` which is runtime-agnostic)
+
+Both libraries serve the same core purpose and share similar design goals (TypeScript-first, dual ESM+CJS output, auto-retry, OAuth + API key auth). They differ mainly in HTTP client choice, error-handling philosophy, validation strategy, and endpoint coverage.
+
 ## Acknowledgments
 
 Special thanks to Filipe for the inspiration and the initial idea that led to the creation of this library. Your project was the spark that made this happen!

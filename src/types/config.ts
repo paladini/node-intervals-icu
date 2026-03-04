@@ -36,6 +36,8 @@ export interface APIError {
   message: string;
   status?: number;
   code?: string;
+  /** Seconds to wait before retrying, from the Retry-After response header */
+  retryAfter?: number;
 }
 
 /**
