@@ -12,7 +12,7 @@ Open-source npm package (`intervals-icu`) providing a comprehensive, fully-typed
 - **Bundler**: tsup → dual CJS (`dist/index.cjs`) + ESM (`dist/index.js`) + declarations
 - **Testing**: vitest (unit tests with mocked axios)
 - **Linting**: eslint + @typescript-eslint
-- **HTTP**: axios + form-data (the only two runtime dependencies)
+- **HTTP**: axios (the only runtime dependency; file uploads use native FormData)
 - **Package**: published to npm as `intervals-icu`, `"type": "module"`
 
 ## Architecture
@@ -54,7 +54,7 @@ src/
 ### Key design decisions
 - **Service accessor pattern**: `client.activities.getActivity(id)` (recommended v2 API)
 - **Dual auth**: API key (`apiKey`) or OAuth bearer token (`accessToken`)
-- **File upload/download**: multipart via form-data, binary download as Buffer
+- **File upload/download**: multipart via native FormData (Node 18+), binary download as Buffer
 - **Auto-retry**: exponential backoff for 429 / 5xx (configurable `maxRetries`, `retryDelayMs`)
 - **Rate-limit tracking**: `getRateLimitRemaining()` / `getRateLimitReset()`
 
@@ -62,7 +62,7 @@ src/
 - Every public method, type, and service must be exported from `src/index.ts`
 - Services receive `IHttpClient` + `athleteId` via constructor — never import axios in services
 - Errors throw `IntervalsAPIError` with `status`, `code`, and `message`
-- Keep runtime dependencies minimal (currently: axios + form-data only)
+- Keep runtime dependencies minimal (currently: axios only)
 - Semantic versioning; breaking changes require major bump
 - All new features need corresponding unit tests in `tests/`
 - JSDoc on all public methods and types

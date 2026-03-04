@@ -1,17 +1,24 @@
 # intervals-icu
 
-Comprehensive TypeScript client for the [Intervals.icu](https://intervals.icu) API. Covers **100+ endpoints** across 16 resource groups with full type safety, OAuth support, file uploads, and automatic retry.
+[![npm version](https://img.shields.io/npm/v/intervals-icu)](https://www.npmjs.com/package/intervals-icu)
+[![npm downloads](https://img.shields.io/npm/dm/intervals-icu)](https://www.npmjs.com/package/intervals-icu)
+[![license](https://img.shields.io/npm/l/intervals-icu)](./LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)](https://www.typescriptlang.org/)
+
+The most comprehensive TypeScript client for the [Intervals.icu](https://intervals.icu) API — the training platform used by cyclists, runners, triathletes, and coaches worldwide.
+
+**100+ typed methods** across 16 service groups. Dual auth (API key + OAuth), file uploads, auto-retry with jitter, and rate-limit tracking. One dependency (`axios`), ~21 KB minified.
 
 ## Features
 
-- **16 services, 100+ methods** — athletes, activities, events, wellness, workouts, sport settings, folders, gear, chats, weather, routes, custom items, shared events, fitness, performance curves, and search
-- **Full TypeScript types** — ~40 interfaces generated from the OpenAPI spec with JSDoc
-- **Two auth methods** — API key (personal use) and OAuth bearer tokens
-- **File upload & download** — multipart activity uploads (.fit/.tcx/.gpx), binary downloads
-- **Auto-retry with exponential backoff** — configurable retries for 429/5xx errors
-- **Rate limit tracking** — built-in headers monitoring
-- **Tree-shakeable** — ESM + CJS dual output
-- **Zero config defaults** — works out of the box with just an API key
+- **16 services, 100+ methods** — athletes, activities, events, wellness, workouts, sport settings, folders, gear, chats, weather, routes, custom items, shared events, fitness, performance curves, search
+- **Full TypeScript types** — ~100 exported interfaces with JSDoc on every public method
+- **Dual authentication** — API key (personal use) or OAuth bearer token (third-party apps)
+- **File upload & download** — multipart activity uploads (.fit/.tcx/.gpx/.zip), binary exports
+- **Auto-retry with backoff + jitter** — configurable retries for 429/5xx, respects `Retry-After` header
+- **Rate limit tracking** — `getRateLimitRemaining()` / `getRateLimitReset()` from response headers
+- **Dual output** — ESM + CJS, tree-shakeable
+- **Minimal footprint** — single runtime dependency, ~21 KB minified
 
 ## Installation
 
@@ -177,12 +184,6 @@ Key changes:
 4. **Default timeout** — increased from 10s to 30s
 5. **Auth config** — `apiKey` is now optional; provide `apiKey` OR `accessToken`
 
-## License
-
-MIT License - Copyright (c) 2025 Fernando Paladini
-
-See the [LICENSE](./LICENSE) file for details.
-
 ## Related Projects
 
 The TypeScript/Node.js ecosystem has a few Intervals.icu API clients worth knowing about:
@@ -205,16 +206,18 @@ The TypeScript/Node.js ecosystem has a few Intervals.icu API clients worth knowi
 
 Both libraries serve the same core purpose and share similar design goals (TypeScript-first, dual ESM+CJS output, auto-retry, OAuth + API key auth). They differ mainly in HTTP client choice, error-handling philosophy, validation strategy, and endpoint coverage.
 
+## License
+
+MIT © [Fernando Paladini](https://github.com/paladini)
+
 ## Acknowledgments
 
 Special thanks to Filipe for the inspiration and the initial idea that led to the creation of this library. Your project was the spark that made this happen!
-
-## Contributing
-
-Contributions are welcome! Please read our [Contributing Guide](./CONTRIBUTING.md) to learn how you can help make this project better.
 
 ## Links
 
 - [Intervals.icu API Documentation](https://intervals.icu/api/v1/docs)
 - [Intervals.icu Website](https://intervals.icu)
-- [GitHub Repository](https://github.com/paladini/intervals-icu)
+- [GitHub Repository](https://github.com/paladini/node-intervals-icu)
+- [npm Package](https://www.npmjs.com/package/intervals-icu)
+- [Changelog](./CHANGELOG.md)

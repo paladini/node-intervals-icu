@@ -3,7 +3,7 @@
 ## Context
 `intervals-icu` is a comprehensive TypeScript client library for the [Intervals.icu](https://intervals.icu) API, published on npm. v2.0 ships 16 service classes, 100+ methods, and ~100 exported types with full type safety, dual auth (API key + OAuth), file upload/download, auto-retry, and rate-limit tracking.
 
-**Runtime deps**: axios, form-data (keep it minimal).
+**Runtime deps**: axios (keep it minimal — no other runtime deps).
 **Dev stack**: TypeScript 5.3+ strict, tsup (CJS+ESM), vitest, eslint.
 **Node**: >= 18.
 
