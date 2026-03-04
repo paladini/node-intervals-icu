@@ -1,6 +1,6 @@
 {
   "name": "intervals-icu",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Comprehensive TypeScript client library for the Intervals.icu API — 100+ endpoints, full type safety, OAuth & API key auth",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
