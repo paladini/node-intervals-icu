@@ -1,137 +1,98 @@
 /**
- * Basic usage examples for node-intervals-icu
- * 
- * Make sure to set the INTERVALS_API_KEY environment variable before running this example:
- * export INTERVALS_API_KEY="your-api-key-here"
+ * Basic usage examples for node-intervals-icu v2.0
+ *
+ * Run:
+ *   export INTERVALS_API_KEY="your-api-key-here"
+ *   npx tsx examples/basic-usage.ts
  */
 
 import { IntervalsClient, IntervalsAPIError } from '../src/index.js';
 
 async function main() {
-  // Initialize the client
   const apiKey = process.env.INTERVALS_API_KEY;
-  
   if (!apiKey) {
     console.error('Please set the INTERVALS_API_KEY environment variable');
     process.exit(1);
   }
 
-  const client = new IntervalsClient({
-    apiKey,
-    athleteId: 'me', // Use 'me' for the authenticated athlete
-  });
+  // athleteId defaults to '0' (the authenticated athlete)
+  const client = new IntervalsClient({ apiKey });
+
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const oldest = thirtyDaysAgo.toISOString().split('T')[0];
+  const newest = now.toISOString().split('T')[0];
 
   try {
-    // 1. Get athlete information
-    console.log('\n=== Getting Athlete Info ===');
-    const athlete = await client.getAthlete();
-    console.log(`Name: ${athlete.name}`);
-    console.log(`FTP: ${athlete.ftp}`);
-    console.log(`Weight: ${athlete.weight} kg`);
+    // 1. Athlete
+    console.log('\n=== Athlete ===');
+    const athlete = await client.athletes.getAthlete();
+    console.log(`${athlete.name} — FTP: ${athlete.ftp}, Weight: ${athlete.weight} kg`);
 
-    // 2. Get recent events
-    console.log('\n=== Getting Recent Events ===');
-    const now = new Date();
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    
-    const events = await client.getEvents({
-      oldest: thirtyDaysAgo.toISOString().split('T')[0],
-      newest: now.toISOString().split('T')[0],
-      limit: 5,
+    // 2. Sport Settings
+    console.log('\n=== Sport Settings ===');
+    const settings = await client.sportSettings.list();
+    settings.forEach((s) => {
+      console.log(`  - ${(s.types || []).join(', ')}: pace=${s.threshold_pace}, power=${s.threshold_power}`);
     });
-    
+
+    // 3. Events (with resolved workout data)
+    console.log('\n=== Recent Events ===');
+    const events = await client.events.listEvents({ oldest, newest, resolve: true });
     console.log(`Found ${events.length} events`);
-    events.forEach((event) => {
-      console.log(`  - ${event.start_date_local}: ${event.name || 'Unnamed'} (${event.category})`);
+    events.slice(0, 5).forEach((e) => {
+      console.log(`  - ${e.start_date_local}: ${e.name || 'Unnamed'} [${e.category}] ${e.type || ''}`);
     });
 
-    // 3. Get recent wellness data
-    console.log('\n=== Getting Recent Wellness Data ===');
-    const wellness = await client.getWellness({
-      oldest: thirtyDaysAgo.toISOString().split('T')[0],
-      newest: now.toISOString().split('T')[0],
-      limit: 5,
-    });
-    
-    console.log(`Found ${wellness.length} wellness entries`);
-    wellness.forEach((w) => {
-      console.log(`  - ${w.date}: Weight=${w.weight}, HR=${w.restingHR}, Sleep=${w.sleepSecs ? (w.sleepSecs / 3600).toFixed(1) + 'h' : 'N/A'}`);
-    });
-
-    // 4. Get recent workouts
-    console.log('\n=== Getting Recent Workouts ===');
-    const workouts = await client.getWorkouts({
-      oldest: thirtyDaysAgo.toISOString().split('T')[0],
-      newest: now.toISOString().split('T')[0],
-      limit: 5,
-    });
-    
-    console.log(`Found ${workouts.length} workouts`);
-    workouts.forEach((workout) => {
-      console.log(`  - ${workout.start_date_local}: ${workout.name || 'Unnamed'} (TSS=${workout.tss})`);
-    });
-
-    // 5. Get recent activities
-    console.log('\n=== Getting Recent Activities ===');
-    const activities = await client.getActivities({
-      oldest: thirtyDaysAgo.toISOString().split('T')[0],
-      newest: now.toISOString().split('T')[0],
-      limit: 5,
-    });
-    
+    // 4. Activities
+    console.log('\n=== Recent Activities ===');
+    const activities = await client.activities.listActivities({ oldest, newest });
     console.log(`Found ${activities.length} activities`);
-    activities.forEach((activity) => {
-      console.log(`  - ${activity.start_date_local}: ${activity.name || 'Unnamed'} (${activity.type})`);
+    activities.slice(0, 5).forEach((a) => {
+      console.log(`  - ${a.start_date_local}: ${a.name} (${a.type}) — ${((a.distance || 0) / 1000).toFixed(1)} km`);
     });
 
-    // 6. Check rate limit status
-    console.log('\n=== Rate Limit Status ===');
-    const remaining = client.getRateLimitRemaining();
-    const reset = client.getRateLimitReset();
-    console.log(`Remaining API calls: ${remaining}`);
-    console.log(`Reset time: ${reset?.toISOString()}`);
+    // 5. Wellness
+    console.log('\n=== Recent Wellness ===');
+    const wellness = await client.wellness.listWellness({ oldest, newest });
+    wellness.slice(0, 5).forEach((w) => {
+      console.log(`  - ${w.date}: weight=${w.weight}, rHR=${w.restingHR}, HRV=${w.hrv}`);
+    });
 
-    // Example: Create a new event (commented out to avoid modifying data)
+    // 6. Fitness (CTL/ATL/TSB)
+    console.log('\n=== Fitness ===');
+    const fitness = await client.fitness.getFitness({ oldest, newest });
+    const latest = fitness[fitness.length - 1];
+    if (latest) {
+      console.log(`Latest: fitness=${latest.fitness}, fatigue=${latest.fatigue}, form=${latest.form}`);
+    }
+
+    // 7. Weather
+    console.log('\n=== Weather ===');
+    const weather = await client.weather.getWeather();
+    const forecast = weather.forecasts?.[0];
+    if (forecast) {
+      console.log(`Next: ${forecast.temp}°, feels like ${forecast.feels_like}°, wind ${forecast.wind_speed} m/s`);
+    }
+
+    // 8. Chat (send a message to yourself)
     /*
-    console.log('\n=== Creating New Event ===');
-    const newEvent = await client.createEvent({
-      start_date_local: '2024-12-20',
-      name: 'Example Race',
-      category: 'RACE',
-      description: 'An example race event',
+    await client.chats.sendMessage({
+      to_athlete_id: athlete.id!,
+      content: 'Hello from node-intervals-icu v2!',
+      type: 'TEXT',
     });
-    console.log(`Created event: ${newEvent.id}`);
     */
 
-    // Example: Create wellness entry (commented out to avoid modifying data)
-    /*
-    console.log('\n=== Creating Wellness Entry ===');
-    const newWellness = await client.createWellness({
-      date: '2024-12-15',
-      weight: 70,
-      restingHR: 50,
-      sleepSecs: 28800, // 8 hours
-      sleepQuality: 8,
-      mood: 7,
-    });
-    console.log(`Created wellness entry for: ${newWellness.date}`);
-    */
+    // 9. Rate limit
+    console.log('\n=== Rate Limit ===');
+    console.log(`Remaining: ${client.getRateLimitRemaining()}, resets at: ${client.getRateLimitReset()?.toISOString()}`);
 
   } catch (error) {
     if (error instanceof IntervalsAPIError) {
-      console.error('\n=== API Error ===');
-      console.error(`Message: ${error.message}`);
-      console.error(`Status: ${error.status}`);
-      console.error(`Code: ${error.code}`);
-      
-      if (error.code === 'AUTH_FAILED') {
-        console.error('\nPlease check your API key is correct');
-      } else if (error.code === 'RATE_LIMIT_EXCEEDED') {
-        console.error('\nRate limit exceeded. Please wait before making more requests');
-      }
+      console.error(`\nAPI Error: ${error.code} — ${error.message} (HTTP ${error.status})`);
     } else {
-      console.error('\n=== Unknown Error ===');
-      console.error(error);
+      console.error('\nUnexpected error:', error);
     }
     process.exit(1);
   }

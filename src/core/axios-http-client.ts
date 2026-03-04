@@ -1,40 +1,50 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
-import type { IHttpClient, HttpRequestConfig } from './http-client.interface.js';
-import type { IntervalsConfig } from '../types.js';
+import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
+import type { IHttpClient, HttpRequestConfig, UploadConfig } from './http-client.interface.js';
+import type { IntervalsConfig } from '../types/index.js';
 import { ErrorHandler } from './error-handler.js';
 import { RateLimitTracker } from './rate-limit-tracker.js';
 
+const DEFAULT_MAX_RETRIES = 3;
+const DEFAULT_RETRY_DELAY_MS = 1000;
+
 /**
  * Axios-based implementation of HTTP client
- * Follows Single Responsibility Principle - only handles HTTP communication
+ * Supports API key auth, OAuth bearer tokens, file upload/download, and auto-retry
  */
 export class AxiosHttpClient implements IHttpClient {
   private client: AxiosInstance;
   private errorHandler: ErrorHandler;
   private rateLimitTracker: RateLimitTracker;
+  private maxRetries: number;
+  private retryDelayMs: number;
 
   constructor(config: IntervalsConfig, errorHandler: ErrorHandler, rateLimitTracker: RateLimitTracker) {
     this.errorHandler = errorHandler;
     this.rateLimitTracker = rateLimitTracker;
+    this.maxRetries = config.maxRetries ?? DEFAULT_MAX_RETRIES;
+    this.retryDelayMs = config.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS;
 
-    const authString = `API_KEY:${config.apiKey}`;
-    let encodedAuth: string;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
 
-    if (typeof window !== 'undefined' && window.btoa) {
-      // Browser
-      encodedAuth = window.btoa(authString);
-    } else {
-      // Node
-      encodedAuth = Buffer.from(authString).toString('base64');
+    if (config.accessToken) {
+      headers['Authorization'] = `Bearer ${config.accessToken}`;
+    } else if (config.apiKey) {
+      const authString = `API_KEY:${config.apiKey}`;
+      let encodedAuth: string;
+      if (typeof globalThis !== 'undefined' && typeof (globalThis as any).btoa === 'function') {
+        encodedAuth = (globalThis as any).btoa(authString);
+      } else {
+        encodedAuth = Buffer.from(authString).toString('base64');
+      }
+      headers['Authorization'] = `Basic ${encodedAuth}`;
     }
 
     this.client = axios.create({
       baseURL: config.baseURL || 'https://intervals.icu/api/v1',
-      timeout: config.timeout || 10000,
-      headers: {
-        'Authorization': `Basic ${encodedAuth}`,
-        'Content-Type': 'application/json',
-      },
+      timeout: config.timeout || 30000,
+      headers,
     });
 
     this.setupInterceptors();
@@ -55,8 +65,72 @@ export class AxiosHttpClient implements IHttpClient {
     );
   }
 
+  private async withRetry<T>(fn: () => Promise<T>): Promise<T> {
+    let lastError: unknown;
+    for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
+      try {
+        return await fn();
+      } catch (error: unknown) {
+        lastError = error;
+        const isRetryable =
+          error instanceof Error &&
+          'status' in error &&
+          ((error as { status?: number }).status === 429 ||
+            (error as { status?: number }).status === 502 ||
+            (error as { status?: number }).status === 503 ||
+            (error as { status?: number }).status === 504);
+
+        if (!isRetryable || attempt === this.maxRetries) {
+          throw error;
+        }
+
+        const delay = this.retryDelayMs * Math.pow(2, attempt);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    throw lastError;
+  }
+
   async request<T>(config: HttpRequestConfig): Promise<T> {
-    const response = await this.client.request<T>(config);
-    return response.data;
+    return this.withRetry(async () => {
+      const axiosConfig: AxiosRequestConfig = {
+        method: config.method,
+        url: config.url,
+        data: config.data,
+        params: config.params,
+        headers: config.headers,
+        responseType: config.responseType as AxiosRequestConfig['responseType'],
+      };
+      const response = await this.client.request<T>(axiosConfig);
+      return response.data;
+    });
+  }
+
+  async upload<T>(config: UploadConfig): Promise<T> {
+    return this.withRetry(async () => {
+      const FormData = (await import('form-data')).default;
+      const form = new FormData();
+      form.append(config.fieldName || 'file', config.file, { filename: config.fileName });
+
+      const response = await this.client.post<T>(config.url, form, {
+        params: config.params,
+        headers: {
+          ...form.getHeaders(),
+        },
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+      });
+      return response.data;
+    });
+  }
+
+  async download(url: string, params?: Record<string, unknown>): Promise<Buffer> {
+    return this.withRetry(async () => {
+      const response = await this.client.get(url, {
+        params,
+        responseType: 'arraybuffer',
+      });
+      return Buffer.from(response.data);
+    });
   }
 }

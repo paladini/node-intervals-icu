@@ -12,18 +12,24 @@ describe('IntervalsClient - Activities', () => {
   let client: IntervalsClient;
 
   beforeEach(() => {
-    // Setup axios mock with request handler
+    // v2.0 URL patterns:
+    //   list:   GET /athlete/{id}/activities
+    //   single: GET /activity/{activityId}
+    //   update: PUT /activity/{activityId}
+    //   delete: DELETE /activity/{activityId}
     setupAxiosMock(mockedAxios, async (config: any) => {
-      if (config.url.includes('/activities') && config.method === 'GET') {
-        if (config.url.match(/\/activities\/\d+$/)) {
-          return mockActivity;
-        }
+      // List activities (athlete-scoped)
+      if (config.url.includes('/athlete/') && config.url.endsWith('/activities') && config.method === 'GET') {
         return mockActivities;
       }
-      if (config.url.includes('/activities') && config.method === 'PUT') {
+      // Single activity operations (no athlete prefix)
+      if (config.url.match(/\/activity\//) && config.method === 'GET') {
+        return mockActivity;
+      }
+      if (config.url.match(/\/activity\//) && config.method === 'PUT') {
         return { ...mockActivity, ...config.data, updated: '2024-01-20T12:00:00Z' };
       }
-      if (config.url.includes('/activities') && config.method === 'DELETE') {
+      if (config.url.match(/\/activity\//) && config.method === 'DELETE') {
         return;
       }
       return [];
@@ -49,16 +55,23 @@ describe('IntervalsClient - Activities', () => {
   });
 
   it('should get a specific activity by ID', async () => {
-    const activity = await client.getActivity(2001);
+    const activity = await client.getActivity('i2001');
 
     expect(activity).toBeDefined();
-    expect(activity.id).toBe(2001);
+    expect(activity.id).toBe('i2001');
     expect(activity.name).toBe('Morning Run');
     expect(activity.type).toBe('Run');
   });
 
+  it('should get activity by numeric ID (backward compat)', async () => {
+    const activity = await client.getActivity(2001);
+
+    expect(activity).toBeDefined();
+    expect(activity.id).toBe('i2001');
+  });
+
   it('should update an existing activity', async () => {
-    const updated = await client.updateActivity(2001, {
+    const updated = await client.updateActivity('i2001', {
       name: 'Updated Morning Run',
       description: 'Easy recovery run - felt great',
       feel: 9,
@@ -70,7 +83,7 @@ describe('IntervalsClient - Activities', () => {
   });
 
   it('should delete an activity', async () => {
-    await expect(client.deleteActivity(2001)).resolves.toBeUndefined();
+    await expect(client.deleteActivity('i2001')).resolves.toBeUndefined();
   });
 
   it('should filter activities by type', async () => {
@@ -93,9 +106,9 @@ describe('IntervalsClient - Activities', () => {
   });
 
   it('should validate activity data structure', async () => {
-    const activity = await client.getActivity(2001);
+    const activity = await client.getActivity('i2001');
     
-    // Check required fields
+    // Check core fields
     expect(activity).toHaveProperty('id');
     expect(activity).toHaveProperty('start_date_local');
     expect(activity).toHaveProperty('type');
@@ -105,19 +118,19 @@ describe('IntervalsClient - Activities', () => {
     expect(activity).toHaveProperty('distance');
     expect(activity).toHaveProperty('moving_time');
     expect(activity).toHaveProperty('elapsed_time');
-    expect(activity).toHaveProperty('tss');
+    expect(activity).toHaveProperty('icu_training_load');
   });
 
   it('should handle activities with detailed metrics', async () => {
-    const activity = await client.getActivity(2001);
+    const activity = await client.getActivity('i2001');
     
-    // Check advanced metrics
-    expect(activity).toHaveProperty('tss');
-    expect(activity).toHaveProperty('feel');
+    // Check advanced metrics (v2.0 field names)
+    expect(activity).toHaveProperty('icu_training_load');
+    expect(activity).toHaveProperty('icu_feel');
     
     // Optional fields
-    if (activity.tss !== undefined) {
-      expect(typeof activity.tss).toBe('number');
+    if (activity.icu_training_load !== undefined) {
+      expect(typeof activity.icu_training_load).toBe('number');
     }
     if (activity.trimp !== undefined) {
       expect(typeof activity.trimp).toBe('number');

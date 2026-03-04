@@ -59,7 +59,7 @@ describe('IntervalsClient - Core Functionality', () => {
       expect(client).toBeDefined();
     });
 
-    it('should default athleteId to "me" when not provided', () => {
+    it('should configure axios with correct defaults', () => {
       const mockInstance = {
         get: vi.fn(),
         interceptors: {
@@ -78,7 +78,7 @@ describe('IntervalsClient - Core Functionality', () => {
       expect(mockedAxios.create).toHaveBeenCalledWith(
         expect.objectContaining({
           baseURL: 'https://intervals.icu/api/v1',
-          timeout: 10000,
+          timeout: 30000,
         })
       );
     });
@@ -159,6 +159,13 @@ describe('IntervalsClient - Core Functionality', () => {
     });
 
     it('should throw IntervalsAPIError on 429 Rate Limit', async () => {
+      // Use maxRetries: 0 to disable retry logic for this test
+      const noRetryClient = new IntervalsClient({
+        apiKey: 'test-api-key',
+        athleteId: 'test-athlete-id',
+        maxRetries: 0,
+      });
+
       const error = new Error('Too Many Requests') as AxiosError;
       error.response = {
         status: 429,
@@ -172,8 +179,8 @@ describe('IntervalsClient - Core Functionality', () => {
         throw await errorHandler(error);
       });
 
-      await expect(client.getAthlete()).rejects.toThrow(IntervalsAPIError);
-      await expect(client.getAthlete()).rejects.toThrow('Rate limit exceeded');
+      await expect(noRetryClient.getAthlete()).rejects.toThrow(IntervalsAPIError);
+      await expect(noRetryClient.getAthlete()).rejects.toThrow('Rate limit exceeded');
     });
 
     it('should throw IntervalsAPIError on 500 Server Error', async () => {

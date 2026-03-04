@@ -1,7 +1,7 @@
-import type { Activity } from '../../src/types.js';
+import type { Activity } from '../../src/types/index.js';
 
 export const mockActivity: Activity = {
-  id: 2001,
+  id: 'i2001',
   athlete_id: 'test-athlete-id',
   start_date_local: '2024-01-15T08:00:00',
   type: 'Run',
@@ -13,8 +13,8 @@ export const mockActivity: Activity = {
   total_elevation_gain: 50,
   trainer: false,
   commute: false,
-  tss: 45,
-  feel: 8,
+  icu_training_load: 45,
+  icu_feel: 8,
   perceived_exertion: 3,
   created: '2024-01-15T10:30:00Z',
   updated: '2024-01-15T10:30:00Z',
@@ -22,7 +22,7 @@ export const mockActivity: Activity = {
 
 export const mockActivities: Activity[] = [
   {
-    id: 2001,
+    id: 'i2001',
     athlete_id: 'test-athlete-id',
     start_date_local: '2024-01-15T08:00:00',
     type: 'Run',
@@ -31,13 +31,13 @@ export const mockActivities: Activity[] = [
     distance: 10000,
     moving_time: 2700,
     elapsed_time: 2850,
-    tss: 45,
-    feel: 8,
+    icu_training_load: 45,
+    icu_feel: 8,
     created: '2024-01-15T10:30:00Z',
     updated: '2024-01-15T10:30:00Z',
   },
   {
-    id: 2002,
+    id: 'i2002',
     athlete_id: 'test-athlete-id',
     start_date_local: '2024-01-16T17:00:00',
     type: 'Ride',
@@ -46,14 +46,14 @@ export const mockActivities: Activity[] = [
     distance: 35000,
     moving_time: 4200,
     elapsed_time: 4500,
-    tss: 75,
-    feel: 7,
+    icu_training_load: 75,
+    icu_feel: 7,
     perceived_exertion: 7,
     created: '2024-01-16T21:30:00Z',
     updated: '2024-01-16T21:30:00Z',
   },
   {
-    id: 2003,
+    id: 'i2003',
     athlete_id: 'test-athlete-id',
     start_date_local: '2024-01-17T06:30:00',
     type: 'Swim',
@@ -62,8 +62,8 @@ export const mockActivities: Activity[] = [
     distance: 2000,
     moving_time: 2400,
     elapsed_time: 2700,
-    tss: 35,
-    feel: 9,
+    icu_training_load: 35,
+    icu_feel: 9,
     created: '2024-01-17T09:30:00Z',
     updated: '2024-01-17T09:30:00Z',
   },

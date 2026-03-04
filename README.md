@@ -1,16 +1,17 @@
 # intervals-icu
 
-A lightweight TypeScript client library for the [Intervals.icu](https://intervals.icu) API. Supports all major endpoints including athletes, events, wellness, workouts, and activities.
+Comprehensive TypeScript client for the [Intervals.icu](https://intervals.icu) API. Covers **100+ endpoints** across 16 resource groups with full type safety, OAuth support, file uploads, and automatic retry.
 
 ## Features
 
-- 🚀 **Lightweight** - Zero dependencies beyond axios
-- 📘 **Fully Typed** - Written in TypeScript with comprehensive type definitions
-- 🌳 **Tree-shakeable** - ESM exports for optimal bundle size
-- 🔐 **Authentication** - Built-in support for API key authentication
-- ⚡ **Rate Limiting Awareness** - Tracks and exposes rate limit information
-- 🛡️ **Error Handling** - Robust error handling with custom error types
-- 📖 **Well Documented** - JSDoc comments on all public methods
+- **16 services, 100+ methods** — athletes, activities, events, wellness, workouts, sport settings, folders, gear, chats, weather, routes, custom items, shared events, fitness, performance curves, and search
+- **Full TypeScript types** — ~40 interfaces generated from the OpenAPI spec with JSDoc
+- **Two auth methods** — API key (personal use) and OAuth bearer tokens
+- **File upload & download** — multipart activity uploads (.fit/.tcx/.gpx), binary downloads
+- **Auto-retry with exponential backoff** — configurable retries for 429/5xx errors
+- **Rate limit tracking** — built-in headers monitoring
+- **Tree-shakeable** — ESM + CJS dual output
+- **Zero config defaults** — works out of the box with just an API key
 
 ## Installation
 
@@ -20,362 +21,185 @@ npm install intervals-icu
 
 ## Quick Start
 
+### API Key Authentication
+
 ```typescript
 import { IntervalsClient } from 'intervals-icu';
 
-// Initialize the client
 const client = new IntervalsClient({
-  apiKey: 'your-api-key-here',
-  athleteId: 'i12345' // optional, defaults to 'me'
+  apiKey: 'your-api-key',
+  athleteId: 'i12345', // optional, defaults to '0' (authenticated athlete)
 });
 
-// Get athlete information
-const athlete = await client.getAthlete();
-console.log(`Athlete: ${athlete.name}, FTP: ${athlete.ftp}`);
+const athlete = await client.athletes.getAthlete();
+console.log(`${athlete.name} — FTP: ${athlete.ftp}`);
+```
 
-// Get events
-const events = await client.getEvents({
-  oldest: '2024-01-01',
-  newest: '2024-12-31'
-});
+### OAuth Bearer Token
 
-// Create a wellness entry
-await client.createWellness({
-  date: '2024-01-15',
-  weight: 70,
-  restingHR: 50,
-  sleepSecs: 28800
+```typescript
+const client = new IntervalsClient({
+  accessToken: 'oauth-access-token',
+  athleteId: 'i12345',
 });
 ```
 
-## API Reference
+## Usage Patterns
 
-### Client Configuration
+### Recommended: Service Accessors
+
+Each resource group has a dedicated service with full method coverage:
+
+```typescript
+// Activities
+const activities = await client.activities.listActivities({ oldest: '2024-01-01', newest: '2024-01-31' });
+const activity = await client.activities.getActivity('i55610271');
+const streams = await client.activities.getStreams('i55610271', ['watts', 'heartrate']);
+
+// Events
+const events = await client.events.listEvents({ oldest: '2024-01-01', newest: '2024-12-31', resolve: true });
+await client.events.createEvent({ start_date_local: '2024-06-01', name: 'Race', category: 'RACE' });
+
+// Wellness
+const wellness = await client.wellness.listWellness({ oldest: '2024-01-01', newest: '2024-01-31' });
+await client.wellness.updateWellnessBulk([{ id: '2024-01-15', weight: 70 }]);
+
+// Sport Settings
+const settings = await client.sportSettings.list();
+
+// Chats
+await client.chats.sendMessage({ to_athlete_id: 'i456', content: 'Great workout!', type: 'TEXT' });
+
+// Fitness & Performance
+const fitness = await client.fitness.getFitness({ oldest: '2024-01-01', newest: '2024-12-31' });
+const curves = await client.performance.getPowerCurves({ oldest: '2024-01-01', newest: '2024-12-31' });
+
+// Search
+const results = await client.search.searchActivities('tempo run');
+
+// Weather
+const weather = await client.weather.getWeather();
+
+// Upload an activity file
+import { readFileSync } from 'fs';
+const file = readFileSync('morning_run.fit');
+await client.activities.uploadActivity(file, 'morning_run.fit');
+```
+
+### Legacy: Facade Methods (deprecated but supported)
+
+For backward compatibility, top-level convenience methods still work:
+
+```typescript
+const athlete = await client.getAthlete();
+const events = await client.getEvents({ oldest: '2024-01-01', newest: '2024-12-31' });
+const activity = await client.getActivity('i55610271');
+await client.createWellness({ date: '2024-01-15', weight: 70 });
+```
+
+## Configuration
 
 ```typescript
 interface IntervalsConfig {
-  apiKey: string;        // Required: Your Intervals.icu API key
-  athleteId?: string;    // Optional: Athlete ID (defaults to 'me')
-  baseURL?: string;      // Optional: API base URL
-  timeout?: number;      // Optional: Request timeout in ms (default: 10000)
+  apiKey?: string;       // API key (mutually exclusive with accessToken)
+  accessToken?: string;  // OAuth bearer token
+  athleteId?: string;    // Athlete ID (default: '0' = authenticated athlete)
+  baseURL?: string;      // API base URL (default: 'https://intervals.icu/api/v1')
+  timeout?: number;      // Request timeout ms (default: 30000)
+  maxRetries?: number;   // Auto-retry count for 429/5xx (default: 3, set 0 to disable)
+  retryDelayMs?: number; // Base retry delay ms, doubles each attempt (default: 1000)
 }
 ```
 
-### Athlete Methods
-
-#### `getAthlete(athleteId?: string): Promise<Athlete>`
-
-Get athlete information.
-
-```typescript
-const athlete = await client.getAthlete();
-console.log(athlete.name, athlete.ftp, athlete.weight);
-```
-
-#### `updateAthlete(data: Partial<Athlete>, athleteId?: string): Promise<Athlete>`
-
-Update athlete information.
-
-```typescript
-const updated = await client.updateAthlete({
-  ftp: 250,
-  weight: 70
-});
-```
-
-### Event Methods
-
-#### `getEvents(options?: PaginationOptions, athleteId?: string): Promise<Event[]>`
-
-Get calendar events.
-
-```typescript
-const events = await client.getEvents({
-  oldest: '2024-01-01',
-  newest: '2024-12-31'
-});
-```
-
-#### `getEvent(eventId: number, athleteId?: string): Promise<Event>`
-
-Get a specific event by ID.
-
-```typescript
-const event = await client.getEvent(12345);
-```
-
-#### `createEvent(data: EventInput, athleteId?: string): Promise<Event>`
-
-Create a new calendar event.
-
-```typescript
-const event = await client.createEvent({
-  start_date_local: '2024-01-15',
-  name: 'Race Day',
-  category: 'RACE',
-  description: 'Important race'
-});
-```
-
-#### `updateEvent(eventId: number, data: Partial<EventInput>, athleteId?: string): Promise<Event>`
-
-Update an existing event.
-
-```typescript
-await client.updateEvent(12345, {
-  name: 'Updated Race Day'
-});
-```
-
-#### `deleteEvent(eventId: number, athleteId?: string): Promise<void>`
-
-Delete an event.
-
-```typescript
-await client.deleteEvent(12345);
-```
-
-#### Filtering Events by Type
-
-Events now include a `type` field that allows you to reliably differentiate between different event types (Run, Ride, Swim, Strength, etc.) without relying on name patterns:
-
-```typescript
-// Get all events
-const allEvents = await client.getEvents({
-  oldest: '2024-01-01',
-  newest: '2024-12-31'
-});
-
-// Filter only running events
-const runEvents = allEvents.filter(event => event.type === 'Run');
-
-// Filter only cycling events
-const rideEvents = allEvents.filter(event => event.type === 'Ride');
-
-// Filter only swimming events
-const swimEvents = allEvents.filter(event => event.type === 'Swim');
-
-// Filter only strength training events
-const strengthEvents = allEvents.filter(event => event.type === 'Strength');
-
-// Find a specific running workout
-const runWorkout = allEvents.find(e => 
-  e.category === 'WORKOUT' && e.type === 'Run'
-);
-```
-
-This approach is:
-- ✅ Reliable and type-safe
-- ✅ Language-agnostic (works with any language/locale)
-- ✅ More maintainable than name-based pattern matching
-
-### Wellness Methods
-
-#### `getWellness(options?: PaginationOptions, athleteId?: string): Promise<Wellness[]>`
-
-Get wellness data.
-
-```typescript
-const wellness = await client.getWellness({
-  oldest: '2024-01-01',
-  newest: '2024-01-31'
-});
-```
-
-#### `createWellness(data: WellnessInput, athleteId?: string): Promise<Wellness>`
-
-Create a new wellness entry.
-
-```typescript
-const wellness = await client.createWellness({
-  date: '2024-01-15',
-  weight: 70,
-  restingHR: 50,
-  hrv: 65,
-  sleepSecs: 28800,
-  sleepQuality: 8
-});
-```
-
-#### `updateWellness(date: string, data: Partial<WellnessInput>, athleteId?: string): Promise<Wellness>`
-
-Update a wellness entry for a specific date.
-
-```typescript
-await client.updateWellness('2024-01-15', {
-  weight: 69.5,
-  mood: 8
-});
-```
-
-#### `deleteWellness(date: string, athleteId?: string): Promise<void>`
-
-Delete a wellness entry.
-
-```typescript
-await client.deleteWellness('2024-01-15');
-```
-
-### Workout Methods
-
-#### `getWorkouts(options?: PaginationOptions, athleteId?: string): Promise<Workout[]>`
-
-Get planned workouts.
-
-```typescript
-const workouts = await client.getWorkouts({
-  oldest: '2024-01-01',
-  newest: '2024-01-31'
-});
-```
-
-#### `getWorkout(workoutId: number, athleteId?: string): Promise<Workout>`
-
-Get a specific workout by ID.
-
-```typescript
-const workout = await client.getWorkout(12345);
-```
-
-#### `createWorkout(data: WorkoutInput, athleteId?: string): Promise<Workout>`
-
-Create a new workout.
-
-```typescript
-const workout = await client.createWorkout({
-  start_date_local: '2024-01-15',
-  name: 'Tempo Run',
-  description: '45 min tempo at threshold',
-  duration_secs: 2700,
-  tss: 65
-});
-```
-
-#### `updateWorkout(workoutId: number, data: Partial<WorkoutInput>, athleteId?: string): Promise<Workout>`
-
-Update an existing workout.
-
-```typescript
-await client.updateWorkout(12345, {
-  name: 'Updated Tempo Run',
-  tss: 70
-});
-```
-
-#### `deleteWorkout(workoutId: number, athleteId?: string): Promise<void>`
-
-Delete a workout.
-
-```typescript
-await client.deleteWorkout(12345);
-```
-
-### Activity Methods
-
-#### `getActivities(options?: PaginationOptions, athleteId?: string): Promise<Activity[]>`
-
-Get recorded activities.
-
-```typescript
-const activities = await client.getActivities({
-  oldest: '2024-01-01',
-  newest: '2024-01-31'
-});
-```
-
-#### `getActivity(activityId: number, athleteId?: string): Promise<Activity>`
-
-Get a specific activity by ID.
-
-```typescript
-const activity = await client.getActivity(12345);
-```
-
-#### `updateActivity(activityId: number, data: ActivityInput, athleteId?: string): Promise<Activity>`
-
-Update an existing activity.
-
-```typescript
-await client.updateActivity(12345, {
-  name: 'Morning Run',
-  description: 'Easy recovery run',
-  feel: 8
-});
-```
-
-#### `deleteActivity(activityId: number, athleteId?: string): Promise<void>`
-
-Delete an activity.
-
-```typescript
-await client.deleteActivity(12345);
-```
-
-## Rate Limiting
-
-The client automatically tracks rate limit information from the API responses:
-
-```typescript
-// Make some API calls
-await client.getAthlete();
-
-// Check rate limit status
-const remaining = client.getRateLimitRemaining();
-const resetTime = client.getRateLimitReset();
-
-console.log(`Remaining: ${remaining}, Resets at: ${resetTime}`);
-```
+## Services Reference
+
+| Service | Accessor | Key Methods |
+|---------|----------|-------------|
+| **Athletes** | `client.athletes` | `getAthlete`, `updateAthlete`, `getTrainingPlan`, `updateTrainingPlan`, `getProfile` |
+| **Activities** | `client.activities` | `listActivities`, `getActivity`, `updateActivity`, `deleteActivity`, `uploadActivity`, `getStreams`, `getIntervals`, `getWeather`, `getPowerCurve`, `getMessages` |
+| **Events** | `client.events` | `listEvents`, `getEvent`, `createEvent`, `updateEvent`, `deleteEvent`, `createEventsBulk`, `markAsDone`, `duplicateEvents` |
+| **Wellness** | `client.wellness` | `listWellness`, `getWellnessByDate`, `createWellness`, `updateWellness`, `deleteWellness`, `updateWellnessBulk` |
+| **Workouts** | `client.workouts` | `listWorkouts`, `getWorkout`, `createWorkout`, `updateWorkout`, `deleteWorkout`, `createWorkoutsBulk`, `duplicateWorkouts` |
+| **Sport Settings** | `client.sportSettings` | `list`, `get`, `create`, `update`, `delete`, `applyToActivities` |
+| **Folders** | `client.folders` | `list`, `create`, `update`, `delete`, `getSharedWith`, `importWorkout`, `applyPlanChanges` |
+| **Gear** | `client.gear` | `create`, `update`, `delete`, `replace`, `createReminder`, `deleteReminder` |
+| **Chats** | `client.chats` | `listChats`, `listMessages`, `sendMessage`, `markSeen` |
+| **Weather** | `client.weather` | `getWeather`, `getWeatherConfig`, `updateWeatherConfig` |
+| **Routes** | `client.routes` | `list`, `get`, `update`, `getSimilarRoutes` |
+| **Custom Items** | `client.customItems` | `list`, `get`, `create`, `update`, `delete`, `reorder`, `uploadImage` |
+| **Shared Events** | `client.sharedEvents` | `get`, `create`, `update`, `delete` |
+| **Fitness** | `client.fitness` | `getFitness`, `getSummaries` |
+| **Performance** | `client.performance` | `getPowerCurves`, `getPaceCurves`, `getHRCurves`, `getPowerVsHR`, `getActivityPowerCurves` |
+| **Search** | `client.search` | `searchActivities`, `searchAthletes` |
 
 ## Error Handling
-
-The client throws `IntervalsAPIError` for all API-related errors:
 
 ```typescript
 import { IntervalsClient, IntervalsAPIError } from 'intervals-icu';
 
 try {
-  const athlete = await client.getAthlete();
+  await client.athletes.getAthlete();
 } catch (error) {
   if (error instanceof IntervalsAPIError) {
-    console.error(`API Error: ${error.message}`);
-    console.error(`Status: ${error.status}`);
-    console.error(`Code: ${error.code}`);
-    
-    // Handle specific error types
+    console.error(`${error.code}: ${error.message} (HTTP ${error.status})`);
+
     if (error.code === 'RATE_LIMIT_EXCEEDED') {
-      console.error('Rate limit exceeded, try again later');
-    } else if (error.code === 'AUTH_FAILED') {
-      console.error('Invalid API key');
+      // Auto-retry handles this, but you can check manually too
+      console.log(`Resets at: ${client.getRateLimitReset()}`);
     }
   }
 }
 ```
 
-## TypeScript Support
+## TypeScript Types
 
-All methods and responses are fully typed. Import types as needed:
+All types are exported from the package root:
 
 ```typescript
 import type {
-  Athlete,
-  Event,
-  Wellness,
-  Workout,
-  Activity,
-  PaginationOptions,
-  IntervalsConfig
-} from 'node-intervals-icu';
+  Athlete, Activity, Event, Wellness, Workout,
+  SportSettings, Folder, Gear, Chat, Message,
+  WeatherConfig, Forecast, PowerCurveSet, PaceCurveSet,
+  IntervalsConfig, PaginationOptions, ListActivitiesOptions,
+} from 'intervals-icu';
 ```
 
 ## Authentication
 
-To get your API key:
+### API Key
 
 1. Log in to [Intervals.icu](https://intervals.icu)
-2. Go to Settings → API Key
+2. Go to **Settings > Developer Settings**
 3. Copy your API key
 
-Your athlete ID can be found in the URL when viewing your profile (e.g., `i12345`), or you can use `'me'` to refer to the authenticated athlete.
+### OAuth
+
+For apps that authenticate on behalf of other users, use the [Intervals.icu OAuth flow](https://forum.intervals.icu/t/api-access-and-oauth/781) to obtain an access token, then pass it as `accessToken`.
+
+## Migrating from v1.x
+
+### Breaking Changes
+
+1. **Activity URLs fixed** — single-activity endpoints now correctly use `/activity/{id}` instead of `/athlete/{id}/activities/{id}`
+2. **Activity IDs are strings** — e.g. `'i55610271'`. Facade methods still accept `number` for backward compatibility.
+3. **Default timeout** — increased from 10s to 30s
+4. **Auth config** — `apiKey` is now optional; provide `apiKey` OR `accessToken`
+5. **New dependency** — `form-data` added for file uploads
+
+### Migration Steps
+
+```typescript
+// v1.x
+const client = new IntervalsClient({ apiKey: 'key', athleteId: 'me' });
+const activity = await client.getActivity(12345);
+
+// v2.0 (recommended)
+const client = new IntervalsClient({ apiKey: 'key' });
+const activity = await client.activities.getActivity('i12345');
+
+// v2.0 (backward compat — still works)
+const activity = await client.getActivity(12345);
+```
 
 ## License
 
@@ -385,15 +209,11 @@ See the [LICENSE](./LICENSE) file for details.
 
 ## Acknowledgments
 
-Special thanks to Filipe for the inspiration and the initial idea that led to the creation of this library. Your project was the spark that made this happen! 🙏
+Special thanks to Filipe for the inspiration and the initial idea that led to the creation of this library. Your project was the spark that made this happen!
 
 ## Contributing
 
 Contributions are welcome! Please read our [Contributing Guide](./CONTRIBUTING.md) to learn how you can help make this project better.
-
-## Publishing
-
-For maintainers: See the [Publishing Guide](./docs/PUBLISHING.md) for detailed instructions on publishing this library to NPM.
 
 ## Links
 

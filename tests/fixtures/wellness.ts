@@ -1,4 +1,4 @@
-import type { Wellness } from '../../src/types.js';
+import type { Wellness } from '../../src/types/index.js';
 
 export const mockWellness: Wellness = {
   id: 'w1',

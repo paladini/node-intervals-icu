@@ -1,5 +1,5 @@
 import { AxiosError } from 'axios';
-import type { APIError } from '../types.js';
+import type { APIError } from '../types/index.js';
 import type { RateLimitTracker } from './rate-limit-tracker.js';
 
 /**

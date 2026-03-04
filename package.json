@@ -1,7 +1,7 @@
 {
   "name": "intervals-icu",
-  "version": "1.2.0",
-  "description": "Lightweight TypeScript client library for Intervals.icu API",
+  "version": "2.0.0",
+  "description": "Comprehensive TypeScript client library for the Intervals.icu API — 100+ endpoints, full type safety, OAuth & API key auth",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -30,9 +30,15 @@
     "training",
     "cycling",
     "running",
+    "swimming",
+    "triathlon",
     "api",
     "client",
-    "typescript"
+    "typescript",
+    "strava",
+    "fitness",
+    "workout",
+    "wellness"
   ],
   "author": "Fernando Paladini <fnpaladini+nodeintervals@gmail.com> (https://github.com/paladini)",
   "contributors": [],
@@ -46,7 +52,8 @@
   },
   "homepage": "https://github.com/paladini/node-intervals-icu#readme",
   "dependencies": {
-    "axios": "^1.6.0"
+    "axios": "^1.6.0",
+    "form-data": "^4.0.5"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
@@ -58,6 +65,6 @@
     "vitest": "^2.1.0"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
   }
 }

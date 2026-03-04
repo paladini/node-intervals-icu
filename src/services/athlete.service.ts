@@ -1,64 +1,59 @@
 import type { IHttpClient } from '../core/http-client.interface.js';
-import type { Athlete, SportSettings } from '../types.js';
+import type {
+  Athlete, AthleteUpdateDTO, AthleteTrainingPlan, AthleteTrainingPlanUpdate,
+  AthleteProfile, SportSettings,
+} from '../types/index.js';
 
 /**
  * Service for athlete-related operations
- * Follows Single Responsibility Principle and Interface Segregation Principle
  */
 export class AthleteService {
   constructor(
     private httpClient: IHttpClient,
     private defaultAthleteId: string
-  ) { }
+  ) {}
 
-  /**
-   * Gets athlete information
-   * 
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * @returns Athlete information
-   */
+  /** Get athlete information (includes sportSettings and custom_items) */
   async getAthlete(athleteId?: string): Promise<Athlete> {
     const id = athleteId || this.defaultAthleteId;
-    return this.httpClient.request<Athlete>({
-      method: 'GET',
-      url: `/athlete/${id}`,
-    });
+    return this.httpClient.request<Athlete>({ method: 'GET', url: `/athlete/${id}` });
   }
 
-  /**
-   * Updates athlete information
-   * 
-   * @param data - Partial athlete data to update
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * @returns Updated athlete information
-   */
-  /**
-   * Updates athlete information
-   * 
-   * @param data - Partial athlete data to update
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * @returns Updated athlete information
-   */
-  async updateAthlete(data: Partial<Athlete>, athleteId?: string): Promise<Athlete> {
+  /** Update athlete information */
+  async updateAthlete(data: AthleteUpdateDTO, athleteId?: string): Promise<Athlete> {
     const id = athleteId || this.defaultAthleteId;
-    return this.httpClient.request<Athlete>({
-      method: 'PUT',
-      url: `/athlete/${id}`,
-      data,
-    });
+    return this.httpClient.request<Athlete>({ method: 'PUT', url: `/athlete/${id}`, data });
+  }
+
+  /** Get the athlete's training plan */
+  async getTrainingPlan(athleteId?: string): Promise<AthleteTrainingPlan> {
+    const id = athleteId || this.defaultAthleteId;
+    return this.httpClient.request<AthleteTrainingPlan>({ method: 'GET', url: `/athlete/${id}/training-plan` });
+  }
+
+  /** Change the athlete's training plan */
+  async updateTrainingPlan(data: AthleteTrainingPlanUpdate, athleteId?: string): Promise<AthleteTrainingPlan> {
+    const id = athleteId || this.defaultAthleteId;
+    return this.httpClient.request<AthleteTrainingPlan>({ method: 'PUT', url: `/athlete/${id}/training-plan`, data });
+  }
+
+  /** Change training plans for a list of athletes */
+  async updateAthletePlans(data: AthleteTrainingPlanUpdate[]): Promise<Record<string, unknown>> {
+    return this.httpClient.request<Record<string, unknown>>({ method: 'PUT', url: `/athlete-plans`, data });
+  }
+
+  /** Get athlete profile (public info, shared folders, custom items) */
+  async getProfile(athleteId?: string): Promise<AthleteProfile> {
+    const id = athleteId || this.defaultAthleteId;
+    return this.httpClient.request<AthleteProfile>({ method: 'GET', url: `/athlete/${id}/profile` });
   }
 
   /**
-   * Gets sport settings (thresholds, zones) for an athlete
-   * 
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * @returns Array of SportSettings (one for each sport type group)
+   * Get sport settings (thresholds, zones) for an athlete.
+   * @deprecated Use SportSettingsService.list() instead
    */
   async getSportSettings(athleteId?: string): Promise<SportSettings[]> {
     const id = athleteId || this.defaultAthleteId;
-    return this.httpClient.request<SportSettings[]>({
-      method: 'GET',
-      url: `/athlete/${id}/sport-settings`,
-    });
+    return this.httpClient.request<SportSettings[]>({ method: 'GET', url: `/athlete/${id}/sport-settings` });
   }
 }

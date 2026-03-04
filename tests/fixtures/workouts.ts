@@ -1,4 +1,4 @@
-import type { Workout } from '../../src/types.js';
+import type { Workout } from '../../src/types/index.js';
 
 export const mockWorkout: Workout = {
   id: 1001,

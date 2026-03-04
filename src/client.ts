@@ -1,17 +1,9 @@
 import type {
-  IntervalsConfig,
-  Athlete,
-  Event,
-  EventInput,
-  Wellness,
-  WellnessInput,
-  Workout,
-  WorkoutInput,
-  Activity,
-  ActivityInput,
-  PaginationOptions,
-  SportSettings,
-} from './types.js';
+  IntervalsConfig, Athlete, AthleteUpdateDTO, Event, EventInput,
+  Wellness, WellnessInput, Workout, WorkoutInput, Activity, ActivityInput,
+  PaginationOptions, ListActivitiesOptions, ListEventsOptions, SportSettings,
+  PaceDistancesDTO,
+} from './types/index.js';
 import { AxiosHttpClient } from './core/axios-http-client.js';
 import { ErrorHandler } from './core/error-handler.js';
 import { RateLimitTracker } from './core/rate-limit-tracker.js';
@@ -20,458 +12,266 @@ import { EventService } from './services/event.service.js';
 import { WellnessService } from './services/wellness.service.js';
 import { WorkoutService } from './services/workout.service.js';
 import { ActivityService } from './services/activity.service.js';
+import { SportSettingsService } from './services/sport-settings.service.js';
+import { FolderService } from './services/folder.service.js';
+import { GearService } from './services/gear.service.js';
+import { ChatService } from './services/chat.service.js';
+import { WeatherService } from './services/weather.service.js';
+import { RouteService } from './services/route.service.js';
+import { CustomItemService } from './services/custom-item.service.js';
+import { SharedEventService } from './services/shared-event.service.js';
+import { FitnessService } from './services/fitness.service.js';
+import { PerformanceService } from './services/performance.service.js';
+import { SearchService } from './services/search.service.js';
+import type { IHttpClient } from './core/http-client.interface.js';
 
 // Re-export for backwards compatibility
 export { IntervalsAPIError } from './core/error-handler.js';
 
 /**
- * Intervals.icu API Client
- * 
- * A lightweight TypeScript client for the Intervals.icu API.
- * Supports all major endpoints including athletes, events, wellness, workouts, and activities.
- * 
- * This client follows SOLID principles:
- * - Single Responsibility: Delegates to specialized services
- * - Open/Closed: Extensible through service composition
- * - Interface Segregation: Services implement focused interfaces
- * - Dependency Inversion: Depends on abstractions (IHttpClient)
- * 
+ * Intervals.icu API Client (v2.0)
+ *
+ * Comprehensive TypeScript client for the Intervals.icu API.
+ * Supports 100+ endpoints across 13 resource groups.
+ *
+ * **Two ways to use:**
+ * 1. **Service accessors** (recommended for new code):
+ *    `client.athletes.getAthlete()`, `client.activities.getStreams('i123')`
+ * 2. **Facade methods** (backward compatible with v1.x):
+ *    `client.getAthlete()`, `client.getEvents()`
+ *
  * @example
  * ```typescript
- * const client = new IntervalsClient({
- *   apiKey: 'your-api-key',
- *   athleteId: 'i12345' // optional, defaults to 'me'
- * });
- * 
- * // Get athlete info
+ * // API key auth (personal use)
+ * const client = new IntervalsClient({ apiKey: 'your-api-key', athleteId: 'i12345' });
+ *
+ * // OAuth bearer token auth (apps)
+ * const client = new IntervalsClient({ accessToken: 'oauth-token' });
+ *
+ * // Service accessor pattern (recommended)
+ * const streams = await client.activities.getStreams('i55610271');
+ * const settings = await client.sportSettings.list();
+ * await client.chats.sendMessage({ to_athlete_id: '123', content: 'Hello!' });
+ *
+ * // Facade methods (backward compatible)
  * const athlete = await client.getAthlete();
- * 
- * // Get events
  * const events = await client.getEvents({ oldest: '2024-01-01', newest: '2024-12-31' });
- * 
- * // Create wellness entry
- * await client.createWellness({ date: '2024-01-15', weight: 70, restingHR: 50 });
  * ```
  */
 export class IntervalsClient {
   private rateLimitTracker: RateLimitTracker;
-  private athleteService: AthleteService;
-  private eventService: EventService;
-  private wellnessService: WellnessService;
-  private workoutService: WorkoutService;
-  private activityService: ActivityService;
+  private httpClient: IHttpClient;
 
-  /**
-   * Creates a new Intervals.icu API client
-   * 
-   * @param config - Configuration object with API key and optional settings
-   */
+  // ── Service accessors (recommended API) ──
+
+  /** Athlete profile, training plans */
+  public readonly athletes: AthleteService;
+  /** Calendar events (workouts, notes, races) */
+  public readonly events: EventService;
+  /** Wellness data (weight, HRV, sleep, etc.) */
+  public readonly wellness: WellnessService;
+  /** Library workouts (templates in folders/plans) */
+  public readonly workouts: WorkoutService;
+  /** Activities (completed or uploaded) — streams, intervals, files, curves */
+  public readonly activities: ActivityService;
+  /** Sport settings (thresholds, zones, load settings) */
+  public readonly sportSettings: SportSettingsService;
+  /** Workout folders and training plans */
+  public readonly folders: FolderService;
+  /** Gear and equipment management */
+  public readonly gear: GearService;
+  /** Chats and messages */
+  public readonly chats: ChatService;
+  /** Weather forecasts and config */
+  public readonly weather: WeatherService;
+  /** Activity routes */
+  public readonly routes: RouteService;
+  /** Custom items (charts, fields, etc.) */
+  public readonly customItems: CustomItemService;
+  /** Shared events (races, group events) */
+  public readonly sharedEvents: SharedEventService;
+  /** Fitness data (CTL, ATL, TSB) and activity summaries */
+  public readonly fitness: FitnessService;
+  /** Athlete-level performance curves (power, pace, HR) */
+  public readonly performance: PerformanceService;
+  /** Search activities and athletes */
+  public readonly search: SearchService;
+
   constructor(config: IntervalsConfig) {
-    const athleteId = config.athleteId || 'me';
+    if (!config.apiKey && !config.accessToken) {
+      throw new Error('IntervalsClient requires either apiKey or accessToken');
+    }
 
-    // Initialize core services following Dependency Inversion Principle
+    const athleteId = config.athleteId || '0';
+
     this.rateLimitTracker = new RateLimitTracker();
     const errorHandler = new ErrorHandler();
-    const httpClient = new AxiosHttpClient(config, errorHandler, this.rateLimitTracker);
+    this.httpClient = new AxiosHttpClient(config, errorHandler, this.rateLimitTracker);
 
-    // Initialize resource-specific services following Single Responsibility Principle
-    this.athleteService = new AthleteService(httpClient, athleteId);
-    this.eventService = new EventService(httpClient, athleteId);
-    this.wellnessService = new WellnessService(httpClient, athleteId);
-    this.workoutService = new WorkoutService(httpClient, athleteId);
-    this.activityService = new ActivityService(httpClient, athleteId);
+    this.athletes = new AthleteService(this.httpClient, athleteId);
+    this.events = new EventService(this.httpClient, athleteId);
+    this.wellness = new WellnessService(this.httpClient, athleteId);
+    this.workouts = new WorkoutService(this.httpClient, athleteId);
+    this.activities = new ActivityService(this.httpClient, athleteId);
+    this.sportSettings = new SportSettingsService(this.httpClient, athleteId);
+    this.folders = new FolderService(this.httpClient, athleteId);
+    this.gear = new GearService(this.httpClient, athleteId);
+    this.chats = new ChatService(this.httpClient);
+    this.weather = new WeatherService(this.httpClient, athleteId);
+    this.routes = new RouteService(this.httpClient, athleteId);
+    this.customItems = new CustomItemService(this.httpClient, athleteId);
+    this.sharedEvents = new SharedEventService(this.httpClient);
+    this.fitness = new FitnessService(this.httpClient, athleteId);
+    this.performance = new PerformanceService(this.httpClient, athleteId);
+    this.search = new SearchService(this.httpClient, athleteId);
   }
 
-  /**
-   * Gets the current rate limit remaining count
-   * 
-   * @returns The number of remaining API calls, or undefined if not yet determined
-   */
+  // ── Rate limiting ──
+
+  /** Get remaining API calls before rate limit */
   public getRateLimitRemaining(): number | undefined {
     return this.rateLimitTracker.getRemaining();
   }
 
-  /**
-   * Gets the time when the rate limit will reset
-   * 
-   * @returns The reset time, or undefined if not yet determined
-   */
+  /** Get time when rate limit resets */
   public getRateLimitReset(): Date | undefined {
     return this.rateLimitTracker.getReset();
   }
 
-  // ==================== ATHLETE ENDPOINTS ====================
+  // ── Misc endpoints (no service) ──
 
-  /**
-   * Gets athlete information
-   * 
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * @returns Athlete information
-   * 
-   * @example
-   * ```typescript
-   * const athlete = await client.getAthlete();
-   * console.log(athlete.name, athlete.ftp);
-   * ```
-   */
+  /** Get pace distances configuration */
+  public async getPaceDistances(): Promise<PaceDistancesDTO> {
+    return this.httpClient.request<PaceDistancesDTO>({ method: 'GET', url: '/pace_distances' });
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  BACKWARD-COMPATIBLE FACADE METHODS (v1.x API)
+  //  These delegate to the service accessors above.
+  //  New code should use the service accessors directly.
+  // ══════════════════════════════════════════════════════════════
+
+  // ── Athlete ──
+
+  /** @deprecated Use client.athletes.getAthlete() */
   public async getAthlete(athleteId?: string): Promise<Athlete> {
-    return this.athleteService.getAthlete(athleteId);
+    return this.athletes.getAthlete(athleteId);
   }
 
-  /**
-   * Updates athlete information
-   * 
-   * @param data - Partial athlete data to update
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * @returns Updated athlete information
-   * 
-   * @example
-   * ```typescript
-   * const updated = await client.updateAthlete({ ftp: 250, weight: 70 });
-   * ```
-   */
-  public async updateAthlete(data: Partial<Athlete>, athleteId?: string): Promise<Athlete> {
-    return this.athleteService.updateAthlete(data, athleteId);
+  /** @deprecated Use client.athletes.updateAthlete() */
+  public async updateAthlete(data: AthleteUpdateDTO, athleteId?: string): Promise<Athlete> {
+    return this.athletes.updateAthlete(data, athleteId);
   }
 
-  /**
-   * Gets sport settings (thresholds, zones) for an athlete
-   * 
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * @returns Array of SportSettings (one for each sport type group)
-   * 
-   * @example
-   * ```typescript
-   * const settings = await client.getSportSettings();
-   * const runSettings = settings.find(s => s.types.includes('Run'));
-   * console.log(runSettings.threshold_pace);
-   * ```
-   */
+  /** @deprecated Use client.sportSettings.list() */
   public async getSportSettings(athleteId?: string): Promise<SportSettings[]> {
-    return this.athleteService.getSportSettings(athleteId);
+    return this.sportSettings.list(athleteId);
   }
 
-  // ==================== EVENT ENDPOINTS ====================
+  // ── Events ──
 
-  /**
-   * Gets events for an athlete
-   * 
-   * @param options - Pagination and filter options
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * @returns Array of events
-   * 
-   * @example
-   * ```typescript
-   * const events = await client.getEvents({ 
-   *   oldest: '2024-01-01', 
-   *   newest: '2024-12-31' 
-   * });
-   * ```
-   */
-  public async getEvents(options?: PaginationOptions, athleteId?: string): Promise<Event[]> {
-    return this.eventService.getEvents(options, athleteId);
+  /** @deprecated Use client.events.listEvents() */
+  public async getEvents(options?: ListEventsOptions, athleteId?: string): Promise<Event[]> {
+    return this.events.listEvents(options, athleteId);
   }
 
-  /**
-   * Gets a specific event by ID
-   * 
-   * @param eventId - Event ID
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * @returns Event data
-   * 
-   * @example
-   * ```typescript
-   * const event = await client.getEvent(12345);
-   * ```
-   */
+  /** @deprecated Use client.events.getEvent() */
   public async getEvent(eventId: number, athleteId?: string): Promise<Event> {
-    return this.eventService.getEvent(eventId, athleteId);
+    return this.events.getEvent(eventId, athleteId);
   }
 
-  /**
-   * Creates a new event
-   * 
-   * @param data - Event data
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * @returns Created event
-   * 
-   * @example
-   * ```typescript
-   * const event = await client.createEvent({
-   *   start_date_local: '2024-01-15',
-   *   name: 'Race Day',
-   *   category: 'RACE'
-   * });
-   * ```
-   */
+  /** @deprecated Use client.events.createEvent() */
   public async createEvent(data: EventInput, athleteId?: string): Promise<Event> {
-    return this.eventService.createEvent(data, athleteId);
+    return this.events.createEvent(data, athleteId);
   }
 
-  /**
-   * Updates an existing event
-   * 
-   * @param eventId - Event ID
-   * @param data - Event data to update
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * @returns Updated event
-   * 
-   * @example
-   * ```typescript
-   * await client.updateEvent(12345, { name: 'Updated Race Day' });
-   * ```
-   */
+  /** @deprecated Use client.events.updateEvent() */
   public async updateEvent(eventId: number, data: Partial<EventInput>, athleteId?: string): Promise<Event> {
-    return this.eventService.updateEvent(eventId, data, athleteId);
+    return this.events.updateEvent(eventId, data, athleteId);
   }
 
-  /**
-   * Deletes an event
-   * 
-   * @param eventId - Event ID
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * 
-   * @example
-   * ```typescript
-   * await client.deleteEvent(12345);
-   * ```
-   */
+  /** @deprecated Use client.events.deleteEvent() */
   public async deleteEvent(eventId: number, athleteId?: string): Promise<void> {
-    return this.eventService.deleteEvent(eventId, athleteId);
+    return this.events.deleteEvent(eventId, undefined, athleteId);
   }
 
-  // ==================== WELLNESS ENDPOINTS ====================
+  // ── Wellness ──
 
-  /**
-   * Gets wellness data for an athlete
-   * 
-   * @param options - Pagination and filter options
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * @returns Array of wellness entries
-   * 
-   * @example
-   * ```typescript
-   * const wellness = await client.getWellness({ 
-   *   oldest: '2024-01-01', 
-   *   newest: '2024-01-31' 
-   * });
-   * ```
-   */
+  /** @deprecated Use client.wellness.listWellness() */
   public async getWellness(options?: PaginationOptions, athleteId?: string): Promise<Wellness[]> {
-    return this.wellnessService.getWellness(options, athleteId);
+    return this.wellness.listWellness(options, athleteId);
   }
 
-  /**
-   * Creates a new wellness entry
-   * 
-   * @param data - Wellness data
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * @returns Created wellness entry
-   * 
-   * @example
-   * ```typescript
-   * const wellness = await client.createWellness({
-   *   date: '2024-01-15',
-   *   weight: 70,
-   *   restingHR: 50,
-   *   sleepSecs: 28800
-   * });
-   * ```
-   */
+  /** @deprecated Use client.wellness.createWellness() */
   public async createWellness(data: WellnessInput, athleteId?: string): Promise<Wellness> {
-    return this.wellnessService.createWellness(data, athleteId);
+    return this.wellness.createWellness(data, athleteId);
   }
 
-  /**
-   * Updates an existing wellness entry
-   * 
-   * @param date - Date of the wellness entry (YYYY-MM-DD format)
-   * @param data - Wellness data to update
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * @returns Updated wellness entry
-   * 
-   * @example
-   * ```typescript
-   * await client.updateWellness('2024-01-15', { weight: 69.5 });
-   * ```
-   */
+  /** @deprecated Use client.wellness.updateWellness() */
   public async updateWellness(date: string, data: Partial<WellnessInput>, athleteId?: string): Promise<Wellness> {
-    return this.wellnessService.updateWellness(date, data, athleteId);
+    return this.wellness.updateWellness(date, data, athleteId);
   }
 
-  /**
-   * Deletes a wellness entry
-   * 
-   * @param date - Date of the wellness entry (YYYY-MM-DD format)
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * 
-   * @example
-   * ```typescript
-   * await client.deleteWellness('2024-01-15');
-   * ```
-   */
+  /** @deprecated Use client.wellness.deleteWellness() */
   public async deleteWellness(date: string, athleteId?: string): Promise<void> {
-    return this.wellnessService.deleteWellness(date, athleteId);
+    return this.wellness.deleteWellness(date, athleteId);
   }
 
-  // ==================== WORKOUT ENDPOINTS ====================
+  // ── Workouts ──
 
-  /**
-   * Gets workouts for an athlete
-   * 
-   * @param options - Pagination and filter options
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * @returns Array of workouts
-   * 
-   * @example
-   * ```typescript
-   * const workouts = await client.getWorkouts({ 
-   *   oldest: '2024-01-01', 
-   *   newest: '2024-01-31' 
-   * });
-   * ```
-   */
+  /** @deprecated Use client.workouts.listWorkouts() */
   public async getWorkouts(options?: PaginationOptions, athleteId?: string): Promise<Workout[]> {
-    return this.workoutService.getWorkouts(options, athleteId);
+    return this.workouts.listWorkouts(options, athleteId);
   }
 
-  /**
-   * Gets a specific workout by ID
-   * 
-   * @param workoutId - Workout ID
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * @returns Workout data
-   * 
-   * @example
-   * ```typescript
-   * const workout = await client.getWorkout(12345);
-   * ```
-   */
+  /** @deprecated Use client.workouts.getWorkout() */
   public async getWorkout(workoutId: number, athleteId?: string): Promise<Workout> {
-    return this.workoutService.getWorkout(workoutId, athleteId);
+    return this.workouts.getWorkout(workoutId, athleteId);
   }
 
-  /**
-   * Creates a new workout
-   * 
-   * @param data - Workout data
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * @returns Created workout
-   * 
-   * @example
-   * ```typescript
-   * const workout = await client.createWorkout({
-   *   start_date_local: '2024-01-15',
-   *   name: 'Tempo Run',
-   *   description: '45 min tempo'
-   * });
-   * ```
-   */
+  /** @deprecated Use client.workouts.createWorkout() */
   public async createWorkout(data: WorkoutInput, athleteId?: string): Promise<Workout> {
-    return this.workoutService.createWorkout(data, athleteId);
+    return this.workouts.createWorkout(data, athleteId);
   }
 
-  /**
-   * Updates an existing workout
-   * 
-   * @param workoutId - Workout ID
-   * @param data - Workout data to update
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * @returns Updated workout
-   * 
-   * @example
-   * ```typescript
-   * await client.updateWorkout(12345, { name: 'Updated Tempo Run' });
-   * ```
-   */
+  /** @deprecated Use client.workouts.updateWorkout() */
   public async updateWorkout(workoutId: number, data: Partial<WorkoutInput>, athleteId?: string): Promise<Workout> {
-    return this.workoutService.updateWorkout(workoutId, data, athleteId);
+    return this.workouts.updateWorkout(workoutId, data, athleteId);
   }
 
-  /**
-   * Deletes a workout
-   * 
-   * @param workoutId - Workout ID
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * 
-   * @example
-   * ```typescript
-   * await client.deleteWorkout(12345);
-   * ```
-   */
+  /** @deprecated Use client.workouts.deleteWorkout() */
   public async deleteWorkout(workoutId: number, athleteId?: string): Promise<void> {
-    return this.workoutService.deleteWorkout(workoutId, athleteId);
+    return this.workouts.deleteWorkout(workoutId, athleteId);
   }
 
-  // ==================== ACTIVITY ENDPOINTS ====================
+  // ── Activities ──
 
-  /**
-   * Gets activities for an athlete
-   * 
-   * @param options - Pagination and filter options
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * @returns Array of activities
-   * 
-   * @example
-   * ```typescript
-   * const activities = await client.getActivities({ 
-   *   oldest: '2024-01-01', 
-   *   newest: '2024-01-31' 
-   * });
-   * ```
-   */
-  public async getActivities(options?: PaginationOptions, athleteId?: string): Promise<Activity[]> {
-    return this.activityService.getActivities(options, athleteId);
+  /** @deprecated Use client.activities.listActivities() */
+  public async getActivities(options?: ListActivitiesOptions, athleteId?: string): Promise<Activity[]> {
+    return this.activities.listActivities(options, athleteId);
   }
 
   /**
-   * Gets a specific activity by ID
-   * 
-   * @param activityId - Activity ID
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * @returns Activity data
-   * 
-   * @example
-   * ```typescript
-   * const activity = await client.getActivity(12345);
-   * ```
+   * Get an activity by ID.
+   * @deprecated Use client.activities.getActivity() — note: activityId is now string (e.g. 'i55610271')
    */
-  public async getActivity(activityId: number, athleteId?: string): Promise<Activity> {
-    return this.activityService.getActivity(activityId, athleteId);
+  public async getActivity(activityId: string | number): Promise<Activity> {
+    return this.activities.getActivity(String(activityId));
   }
 
   /**
-   * Updates an existing activity
-   * 
-   * @param activityId - Activity ID
-   * @param data - Activity data to update
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * @returns Updated activity
-   * 
-   * @example
-   * ```typescript
-   * await client.updateActivity(12345, { 
-   *   name: 'Morning Run',
-   *   description: 'Easy recovery run'
-   * });
-   * ```
+   * Update an activity.
+   * @deprecated Use client.activities.updateActivity() — note: activityId is now string
    */
-  public async updateActivity(activityId: number, data: ActivityInput, athleteId?: string): Promise<Activity> {
-    return this.activityService.updateActivity(activityId, data, athleteId);
+  public async updateActivity(activityId: string | number, data: ActivityInput): Promise<Activity> {
+    return this.activities.updateActivity(String(activityId), data);
   }
 
   /**
-   * Deletes an activity
-   * 
-   * @param activityId - Activity ID
-   * @param athleteId - Athlete ID (defaults to the configured athlete or 'me')
-   * 
-   * @example
-   * ```typescript
-   * await client.deleteActivity(12345);
-   * ```
+   * Delete an activity.
+   * @deprecated Use client.activities.deleteActivity() — note: activityId is now string
    */
-  public async deleteActivity(activityId: number, athleteId?: string): Promise<void> {
-    return this.activityService.deleteActivity(activityId, athleteId);
+  public async deleteActivity(activityId: string | number): Promise<void> {
+    await this.activities.deleteActivity(String(activityId));
   }
 }

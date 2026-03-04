@@ -1,4 +1,4 @@
-import type { Event } from '../../src/types.js';
+import type { Event } from '../../src/types/index.js';
 
 export const mockEvent: Event = {
   id: 1,

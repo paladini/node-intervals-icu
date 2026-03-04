@@ -1,9 +1,8 @@
 import type { IHttpClient } from '../core/http-client.interface.js';
-import type { Workout, WorkoutInput, PaginationOptions } from '../types.js';
+import type { Workout, WorkoutInput, DuplicateWorkoutsDTO, PaginationOptions } from '../types/index.js';
 
 /**
- * Service for workout-related operations
- * Follows Single Responsibility Principle and Interface Segregation Principle
+ * Service for library workout operations (workout templates in folders/plans)
  */
 export class WorkoutService {
   constructor(
@@ -11,61 +10,66 @@ export class WorkoutService {
     private defaultAthleteId: string
   ) {}
 
-  /**
-   * Gets workouts for an athlete
-   */
-  async getWorkouts(options?: PaginationOptions, athleteId?: string): Promise<Workout[]> {
+  /** List workouts in the athlete's library */
+  async listWorkouts(options?: PaginationOptions, athleteId?: string): Promise<Workout[]> {
     const id = athleteId || this.defaultAthleteId;
-    return this.httpClient.request<Workout[]>({
-      method: 'GET',
-      url: `/athlete/${id}/workouts`,
-      params: options as Record<string, unknown>,
-    });
+    return this.httpClient.request<Workout[]>({ method: 'GET', url: `/athlete/${id}/workouts`, params: options as Record<string, unknown> });
   }
 
-  /**
-   * Gets a specific workout by ID
-   */
+  /** @deprecated Use listWorkouts() instead */
+  async getWorkouts(options?: PaginationOptions, athleteId?: string): Promise<Workout[]> {
+    return this.listWorkouts(options, athleteId);
+  }
+
+  /** Get a specific workout by ID */
   async getWorkout(workoutId: number, athleteId?: string): Promise<Workout> {
     const id = athleteId || this.defaultAthleteId;
-    return this.httpClient.request<Workout>({
-      method: 'GET',
-      url: `/athlete/${id}/workouts/${workoutId}`,
-    });
+    return this.httpClient.request<Workout>({ method: 'GET', url: `/athlete/${id}/workouts/${workoutId}` });
   }
 
-  /**
-   * Creates a new workout
-   */
+  /** Create a new workout */
   async createWorkout(data: WorkoutInput, athleteId?: string): Promise<Workout> {
     const id = athleteId || this.defaultAthleteId;
-    return this.httpClient.request<Workout>({
-      method: 'POST',
-      url: `/athlete/${id}/workouts`,
-      data,
-    });
+    return this.httpClient.request<Workout>({ method: 'POST', url: `/athlete/${id}/workouts`, data });
   }
 
-  /**
-   * Updates an existing workout
-   */
+  /** Create multiple workouts at once */
+  async createWorkoutsBulk(data: WorkoutInput[], athleteId?: string): Promise<Workout[]> {
+    const id = athleteId || this.defaultAthleteId;
+    return this.httpClient.request<Workout[]>({ method: 'POST', url: `/athlete/${id}/workouts/bulk`, data });
+  }
+
+  /** Update an existing workout */
   async updateWorkout(workoutId: number, data: Partial<WorkoutInput>, athleteId?: string): Promise<Workout> {
     const id = athleteId || this.defaultAthleteId;
-    return this.httpClient.request<Workout>({
-      method: 'PUT',
-      url: `/athlete/${id}/workouts/${workoutId}`,
-      data,
-    });
+    return this.httpClient.request<Workout>({ method: 'PUT', url: `/athlete/${id}/workouts/${workoutId}`, data });
+  }
+
+  /** Delete a workout */
+  async deleteWorkout(workoutId: number, athleteId?: string): Promise<void> {
+    const id = athleteId || this.defaultAthleteId;
+    await this.httpClient.request<void>({ method: 'DELETE', url: `/athlete/${id}/workouts/${workoutId}` });
+  }
+
+  /** Duplicate workouts */
+  async duplicateWorkouts(data: DuplicateWorkoutsDTO, athleteId?: string): Promise<Workout[]> {
+    const id = athleteId || this.defaultAthleteId;
+    return this.httpClient.request<Workout[]>({ method: 'POST', url: `/athlete/${id}/duplicate-workouts`, data });
   }
 
   /**
-   * Deletes a workout
+   * Download a workout converted to a specific format (.zwo, .mrc, .erg, .fit).
+   * Uses the global endpoint (no athlete prefix).
    */
-  async deleteWorkout(workoutId: number, athleteId?: string): Promise<void> {
+  async downloadWorkout(workoutId: number, format: '.zwo' | '.mrc' | '.erg' | '.fit'): Promise<Buffer> {
+    return this.httpClient.download(`/download-workout${format}`, { id: workoutId });
+  }
+
+  /**
+   * Download a workout converted to a specific format, resolving athlete-specific settings.
+   */
+  async downloadWorkoutForAthlete(workoutId: number, format: '.zwo' | '.mrc' | '.erg' | '.fit', athleteId?: string): Promise<Buffer> {
     const id = athleteId || this.defaultAthleteId;
-    await this.httpClient.request<void>({
-      method: 'DELETE',
-      url: `/athlete/${id}/workouts/${workoutId}`,
-    });
+    return this.httpClient.download(`/athlete/${id}/download-workout${format}`, { id: workoutId });
   }
 }
