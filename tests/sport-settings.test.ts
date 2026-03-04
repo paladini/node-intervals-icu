@@ -96,9 +96,4 @@ describe('IntervalsClient - Sport Settings', () => {
     await expect(client.sportSettings.applyToActivities(1)).resolves.toBeUndefined();
   });
 
-  it('should be accessible via deprecated getSportSettings facade', async () => {
-    const settings = await client.getSportSettings();
-    expect(settings).toBeDefined();
-    expect(settings.length).toBe(2);
-  });
 });

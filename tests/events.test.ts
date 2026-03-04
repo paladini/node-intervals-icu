@@ -39,7 +39,7 @@ describe('IntervalsClient - Events', () => {
   });
 
   it('should return events with type field', async () => {
-    const events = await client.getEvents({
+    const events = await client.events.listEvents({
       oldest: '2024-01-01',
       newest: '2024-01-31',
     });
@@ -56,7 +56,7 @@ describe('IntervalsClient - Events', () => {
   });
 
   it('should return events with correct type values', async () => {
-    const events = await client.getEvents({
+    const events = await client.events.listEvents({
       oldest: '2024-01-01',
       newest: '2024-01-31',
     });
@@ -82,7 +82,7 @@ describe('IntervalsClient - Events', () => {
   });
 
   it('should filter events by type', async () => {
-    const events = await client.getEvents({
+    const events = await client.events.listEvents({
       oldest: '2024-01-01',
       newest: '2024-01-31',
     });
@@ -104,7 +104,7 @@ describe('IntervalsClient - Events', () => {
   });
 
   it('should allow filtering workouts by type and category', async () => {
-    const events = await client.getEvents({
+    const events = await client.events.listEvents({
       oldest: '2024-01-01',
       newest: '2024-01-31',
     });
@@ -130,7 +130,7 @@ describe('IntervalsClient - Events', () => {
       athleteId: 'test-athlete-id',
     });
 
-    const events = await testClient.getEvents({
+    const events = await testClient.events.listEvents({
       oldest: '2024-01-01',
       newest: '2024-01-31',
     });
@@ -141,7 +141,7 @@ describe('IntervalsClient - Events', () => {
   });
 
   it('should get a specific event by ID', async () => {
-    const event = await client.getEvent(1);
+    const event = await client.events.getEvent(1);
 
     expect(event).toBeDefined();
     expect(event.id).toBe(1);
@@ -150,7 +150,7 @@ describe('IntervalsClient - Events', () => {
   });
 
   it('should create a new event', async () => {
-    const newEvent = await client.createEvent({
+    const newEvent = await client.events.createEvent({
       start_date_local: '2024-01-20',
       name: 'New Event',
       category: 'WORKOUT',
@@ -164,7 +164,7 @@ describe('IntervalsClient - Events', () => {
   });
 
   it('should update an existing event', async () => {
-    const updated = await client.updateEvent(1, {
+    const updated = await client.events.updateEvent(1, {
       name: 'Updated Morning Run',
     });
 
@@ -174,6 +174,6 @@ describe('IntervalsClient - Events', () => {
   });
 
   it('should delete an event', async () => {
-    await expect(client.deleteEvent(1)).resolves.toBeUndefined();
+    await expect(client.events.deleteEvent(1)).resolves.toBeUndefined();
   });
 });

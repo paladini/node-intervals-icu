@@ -42,7 +42,7 @@ describe('IntervalsClient - Activities', () => {
   });
 
   it('should get recorded activities', async () => {
-    const activities = await client.getActivities({
+    const activities = await client.activities.listActivities({
       oldest: '2024-01-01',
       newest: '2024-01-31',
     });
@@ -55,7 +55,7 @@ describe('IntervalsClient - Activities', () => {
   });
 
   it('should get a specific activity by ID', async () => {
-    const activity = await client.getActivity('i2001');
+    const activity = await client.activities.getActivity('i2001');
 
     expect(activity).toBeDefined();
     expect(activity.id).toBe('i2001');
@@ -63,15 +63,8 @@ describe('IntervalsClient - Activities', () => {
     expect(activity.type).toBe('Run');
   });
 
-  it('should get activity by numeric ID (backward compat)', async () => {
-    const activity = await client.getActivity(2001);
-
-    expect(activity).toBeDefined();
-    expect(activity.id).toBe('i2001');
-  });
-
   it('should update an existing activity', async () => {
-    const updated = await client.updateActivity('i2001', {
+    const updated = await client.activities.updateActivity('i2001', {
       name: 'Updated Morning Run',
       description: 'Easy recovery run - felt great',
       feel: 9,
@@ -83,11 +76,11 @@ describe('IntervalsClient - Activities', () => {
   });
 
   it('should delete an activity', async () => {
-    await expect(client.deleteActivity('i2001')).resolves.toBeUndefined();
+    await expect(client.activities.deleteActivity('i2001')).resolves.toBeUndefined();
   });
 
   it('should filter activities by type', async () => {
-    const activities = await client.getActivities({
+    const activities = await client.activities.listActivities({
       oldest: '2024-01-01',
       newest: '2024-01-31',
     });
@@ -106,7 +99,7 @@ describe('IntervalsClient - Activities', () => {
   });
 
   it('should validate activity data structure', async () => {
-    const activity = await client.getActivity('i2001');
+    const activity = await client.activities.getActivity('i2001');
     
     // Check core fields
     expect(activity).toHaveProperty('id');
@@ -122,7 +115,7 @@ describe('IntervalsClient - Activities', () => {
   });
 
   it('should handle activities with detailed metrics', async () => {
-    const activity = await client.getActivity('i2001');
+    const activity = await client.activities.getActivity('i2001');
     
     // Check advanced metrics (v2.0 field names)
     expect(activity).toHaveProperty('icu_training_load');

@@ -136,8 +136,8 @@ describe('IntervalsClient - Core Functionality', () => {
         throw await errorHandler(error);
       });
 
-      await expect(client.getAthlete()).rejects.toThrow(IntervalsAPIError);
-      await expect(client.getAthlete()).rejects.toThrow('authentication failed');
+      await expect(client.athletes.getAthlete()).rejects.toThrow(IntervalsAPIError);
+      await expect(client.athletes.getAthlete()).rejects.toThrow('authentication failed');
     });
 
     it('should throw IntervalsAPIError on 404 Not Found', async () => {
@@ -154,8 +154,8 @@ describe('IntervalsClient - Core Functionality', () => {
         throw await errorHandler(error);
       });
 
-      await expect(client.getEvent(99999)).rejects.toThrow(IntervalsAPIError);
-      await expect(client.getEvent(99999)).rejects.toThrow('not found');
+      await expect(client.events.getEvent(99999)).rejects.toThrow(IntervalsAPIError);
+      await expect(client.events.getEvent(99999)).rejects.toThrow('not found');
     });
 
     it('should throw IntervalsAPIError on 429 Rate Limit', async () => {
@@ -179,8 +179,8 @@ describe('IntervalsClient - Core Functionality', () => {
         throw await errorHandler(error);
       });
 
-      await expect(noRetryClient.getAthlete()).rejects.toThrow(IntervalsAPIError);
-      await expect(noRetryClient.getAthlete()).rejects.toThrow('Rate limit exceeded');
+      await expect(noRetryClient.athletes.getAthlete()).rejects.toThrow(IntervalsAPIError);
+      await expect(noRetryClient.athletes.getAthlete()).rejects.toThrow('Rate limit exceeded');
     });
 
     it('should throw IntervalsAPIError on 500 Server Error', async () => {
@@ -197,7 +197,7 @@ describe('IntervalsClient - Core Functionality', () => {
         throw await errorHandler(error);
       });
 
-      await expect(client.getAthlete()).rejects.toThrow(IntervalsAPIError);
+      await expect(client.athletes.getAthlete()).rejects.toThrow(IntervalsAPIError);
     });
 
     it('should handle network errors', async () => {
@@ -207,7 +207,7 @@ describe('IntervalsClient - Core Functionality', () => {
         throw await errorHandler(error);
       });
 
-      await expect(client.getAthlete()).rejects.toThrow(IntervalsAPIError);
+      await expect(client.athletes.getAthlete()).rejects.toThrow(IntervalsAPIError);
     });
   });
 
@@ -254,7 +254,7 @@ describe('IntervalsClient - Core Functionality', () => {
         return mockResponse;
       });
 
-      await client.getAthlete();
+      await client.athletes.getAthlete();
 
       const remaining = client.getRateLimitRemaining();
       const reset = client.getRateLimitReset();
@@ -327,7 +327,7 @@ describe('IntervalsClient - Core Functionality', () => {
       });
 
       try {
-        await testClient.getAthlete();
+        await testClient.athletes.getAthlete();
         expect.fail('Should have thrown error');
       } catch (error) {
         expect(error).toBeInstanceOf(IntervalsAPIError);

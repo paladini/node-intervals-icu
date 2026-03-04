@@ -16,11 +16,6 @@ export class WorkoutService {
     return this.httpClient.request<Workout[]>({ method: 'GET', url: `/athlete/${id}/workouts`, params: options as Record<string, unknown> });
   }
 
-  /** @deprecated Use listWorkouts() instead */
-  async getWorkouts(options?: PaginationOptions, athleteId?: string): Promise<Workout[]> {
-    return this.listWorkouts(options, athleteId);
-  }
-
   /** Get a specific workout by ID */
   async getWorkout(workoutId: number, athleteId?: string): Promise<Workout> {
     const id = athleteId || this.defaultAthleteId;

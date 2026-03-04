@@ -21,11 +21,6 @@ export class EventService {
     return this.httpClient.request<Event[]>({ method: 'GET', url: `/athlete/${id}/events`, params });
   }
 
-  /** @deprecated Use listEvents() instead */
-  async getEvents(options?: ListEventsOptions, athleteId?: string): Promise<Event[]> {
-    return this.listEvents(options, athleteId);
-  }
-
   /** Get a specific event by ID */
   async getEvent(eventId: number, athleteId?: string): Promise<Event> {
     const id = athleteId || this.defaultAthleteId;

@@ -31,11 +31,6 @@ export class ActivityService {
     return this.httpClient.request<Activity[]>({ method: 'GET', url: `/athlete/${id}/activities`, params });
   }
 
-  /** @deprecated Use listActivities() instead */
-  async getActivities(options?: ListActivitiesOptions, athleteId?: string): Promise<Activity[]> {
-    return this.listActivities(options, athleteId);
-  }
-
   /** Upload a new activity from file (fit, tcx, gpx, or zip/gz) */
   async uploadActivity(
     file: Buffer | Blob | NodeJS.ReadableStream,

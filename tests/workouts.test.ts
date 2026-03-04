@@ -39,7 +39,7 @@ describe('IntervalsClient - Workouts', () => {
   });
 
   it('should get planned workouts', async () => {
-    const workouts = await client.getWorkouts({
+    const workouts = await client.workouts.listWorkouts({
       oldest: '2024-01-01',
       newest: '2024-01-31',
     });
@@ -51,7 +51,7 @@ describe('IntervalsClient - Workouts', () => {
   });
 
   it('should get a specific workout by ID', async () => {
-    const workout = await client.getWorkout(1001);
+    const workout = await client.workouts.getWorkout(1001);
 
     expect(workout).toBeDefined();
     expect(workout.id).toBe(1001);
@@ -60,7 +60,7 @@ describe('IntervalsClient - Workouts', () => {
   });
 
   it('should create a new workout', async () => {
-    const newWorkout = await client.createWorkout({
+    const newWorkout = await client.workouts.createWorkout({
       start_date_local: '2024-01-20',
       name: 'New Interval Session',
       description: '5x5min @ VO2max',
@@ -75,7 +75,7 @@ describe('IntervalsClient - Workouts', () => {
   });
 
   it('should update an existing workout', async () => {
-    const updated = await client.updateWorkout(1001, {
+    const updated = await client.workouts.updateWorkout(1001, {
       name: 'Updated Tempo Run',
       tss: 70,
     });
@@ -86,11 +86,11 @@ describe('IntervalsClient - Workouts', () => {
   });
 
   it('should delete a workout', async () => {
-    await expect(client.deleteWorkout(1001)).resolves.toBeUndefined();
+    await expect(client.workouts.deleteWorkout(1001)).resolves.toBeUndefined();
   });
 
   it('should filter workouts by type', async () => {
-    const workouts = await client.getWorkouts({
+    const workouts = await client.workouts.listWorkouts({
       oldest: '2024-01-01',
       newest: '2024-01-31',
     });
@@ -107,7 +107,7 @@ describe('IntervalsClient - Workouts', () => {
   });
 
   it('should validate workout data structure', async () => {
-    const workout = await client.getWorkout(1001);
+    const workout = await client.workouts.getWorkout(1001);
     
     // Check required fields
     expect(workout).toHaveProperty('id');

@@ -36,7 +36,7 @@ describe('IntervalsClient - Wellness', () => {
   });
 
   it('should get wellness entries', async () => {
-    const wellness = await client.getWellness({
+    const wellness = await client.wellness.listWellness({
       oldest: '2024-01-01',
       newest: '2024-01-31',
     });
@@ -48,7 +48,7 @@ describe('IntervalsClient - Wellness', () => {
   });
 
   it('should create a new wellness entry', async () => {
-    const newWellness = await client.createWellness({
+    const newWellness = await client.wellness.createWellness({
       date: '2024-01-20',
       weight: 70.5,
       restingHR: 49,
@@ -64,7 +64,7 @@ describe('IntervalsClient - Wellness', () => {
   });
 
   it('should update a wellness entry', async () => {
-    const updated = await client.updateWellness('2024-01-15', {
+    const updated = await client.wellness.updateWellness('2024-01-15', {
       weight: 69.8,
       mood: 9,
     });
@@ -74,11 +74,11 @@ describe('IntervalsClient - Wellness', () => {
   });
 
   it('should delete a wellness entry', async () => {
-    await expect(client.deleteWellness('2024-01-15')).resolves.toBeUndefined();
+    await expect(client.wellness.deleteWellness('2024-01-15')).resolves.toBeUndefined();
   });
 
   it('should validate wellness data structure', async () => {
-    const wellness = await client.getWellness({
+    const wellness = await client.wellness.listWellness({
       oldest: '2024-01-01',
       newest: '2024-01-31',
     });
@@ -104,7 +104,7 @@ describe('IntervalsClient - Wellness', () => {
       athleteId: 'test-athlete-id',
     });
 
-    const wellness = await testClient.getWellness({
+    const wellness = await testClient.wellness.listWellness({
       oldest: '2024-01-01',
       newest: '2024-01-31',
     });

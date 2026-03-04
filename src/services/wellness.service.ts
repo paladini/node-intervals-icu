@@ -16,11 +16,6 @@ export class WellnessService {
     return this.httpClient.request<Wellness[]>({ method: 'GET', url: `/athlete/${id}/wellness`, params: options as Record<string, unknown> });
   }
 
-  /** @deprecated Use listWellness() instead */
-  async getWellness(options?: PaginationOptions, athleteId?: string): Promise<Wellness[]> {
-    return this.listWellness(options, athleteId);
-  }
-
   /** Get a single wellness record by date (ISO-8601 local date) */
   async getWellnessByDate(date: string, athleteId?: string): Promise<Wellness> {
     const id = athleteId || this.defaultAthleteId;

@@ -30,7 +30,7 @@ describe('IntervalsClient - Athlete', () => {
   });
 
   it('should get athlete information', async () => {
-    const athlete = await client.getAthlete();
+    const athlete = await client.athletes.getAthlete();
 
     expect(athlete).toBeDefined();
     expect(athlete.id).toBe('i12345');
@@ -41,14 +41,14 @@ describe('IntervalsClient - Athlete', () => {
   });
 
   it('should get athlete information with custom athleteId', async () => {
-    const athlete = await client.getAthlete('custom-athlete-id');
+    const athlete = await client.athletes.getAthlete('custom-athlete-id');
 
     expect(athlete).toBeDefined();
     expect(athlete.name).toBe('Test Athlete');
   });
 
   it('should update athlete information', async () => {
-    const updated = await client.updateAthlete(mockAthleteUpdate);
+    const updated = await client.athletes.updateAthlete(mockAthleteUpdate);
 
     expect(updated).toBeDefined();
     expect(updated.ftp).toBe(260);
@@ -58,14 +58,14 @@ describe('IntervalsClient - Athlete', () => {
   });
 
   it('should update athlete information with partial data', async () => {
-    const updated = await client.updateAthlete({ ftp: 270 });
+    const updated = await client.athletes.updateAthlete({ ftp: 270 });
 
     expect(updated).toBeDefined();
     expect(updated.updated).toBeDefined();
   });
 
   it('should validate athlete data structure', async () => {
-    const athlete = await client.getAthlete();
+    const athlete = await client.athletes.getAthlete();
 
     // Check required fields
     expect(athlete).toHaveProperty('id');

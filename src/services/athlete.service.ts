@@ -1,7 +1,7 @@
 import type { IHttpClient } from '../core/http-client.interface.js';
 import type {
   Athlete, AthleteUpdateDTO, AthleteTrainingPlan, AthleteTrainingPlanUpdate,
-  AthleteProfile, SportSettings,
+  AthleteProfile,
 } from '../types/index.js';
 
 /**
@@ -46,14 +46,5 @@ export class AthleteService {
   async getProfile(athleteId?: string): Promise<AthleteProfile> {
     const id = athleteId || this.defaultAthleteId;
     return this.httpClient.request<AthleteProfile>({ method: 'GET', url: `/athlete/${id}/profile` });
-  }
-
-  /**
-   * Get sport settings (thresholds, zones) for an athlete.
-   * @deprecated Use SportSettingsService.list() instead
-   */
-  async getSportSettings(athleteId?: string): Promise<SportSettings[]> {
-    const id = athleteId || this.defaultAthleteId;
-    return this.httpClient.request<SportSettings[]>({ method: 'GET', url: `/athlete/${id}/sport-settings` });
   }
 }

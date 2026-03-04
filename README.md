@@ -86,17 +86,6 @@ const file = readFileSync('morning_run.fit');
 await client.activities.uploadActivity(file, 'morning_run.fit');
 ```
 
-### Legacy: Facade Methods (deprecated but supported)
-
-For backward compatibility, top-level convenience methods still work:
-
-```typescript
-const athlete = await client.getAthlete();
-const events = await client.getEvents({ oldest: '2024-01-01', newest: '2024-12-31' });
-const activity = await client.getActivity('i55610271');
-await client.createWellness({ date: '2024-01-15', weight: 70 });
-```
-
 ## Configuration
 
 ```typescript
@@ -178,28 +167,15 @@ For apps that authenticate on behalf of other users, use the [Intervals.icu OAut
 
 ## Migrating from v1.x
 
-### Breaking Changes
+See the full [Migration Guide](./docs/MIGRATION.md) for a complete list of removed methods and before/after examples.
 
-1. **Activity URLs fixed** — single-activity endpoints now correctly use `/activity/{id}` instead of `/athlete/{id}/activities/{id}`
-2. **Activity IDs are strings** — e.g. `'i55610271'`. Facade methods still accept `number` for backward compatibility.
-3. **Default timeout** — increased from 10s to 30s
-4. **Auth config** — `apiKey` is now optional; provide `apiKey` OR `accessToken`
-5. **New dependency** — `form-data` added for file uploads
+Key changes:
 
-### Migration Steps
-
-```typescript
-// v1.x
-const client = new IntervalsClient({ apiKey: 'key', athleteId: 'me' });
-const activity = await client.getActivity(12345);
-
-// v2.0 (recommended)
-const client = new IntervalsClient({ apiKey: 'key' });
-const activity = await client.activities.getActivity('i12345');
-
-// v2.0 (backward compat — still works)
-const activity = await client.getActivity(12345);
-```
+1. **All facade methods removed** — use service accessors (e.g. `client.athletes.getAthlete()` instead of `client.getAthlete()`)
+2. **Activity IDs are strings** — e.g. `'i55610271'`
+3. **Activity URLs fixed** — single-activity endpoints now use `/activity/{id}`
+4. **Default timeout** — increased from 10s to 30s
+5. **Auth config** — `apiKey` is now optional; provide `apiKey` OR `accessToken`
 
 ## License
 

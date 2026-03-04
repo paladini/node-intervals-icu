@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-03-03
+
+### Removed
+- **All 20 backward-compatible facade methods** from `IntervalsClient` (e.g. `client.getAthlete()`, `client.getEvents()`, `client.getActivity()`) — use service accessors instead (e.g. `client.athletes.getAthlete()`, `client.events.listEvents()`, `client.activities.getActivity()`)
+- **5 deprecated service aliases**: `getActivities()`, `getEvents()`, `getWellness()`, `getWorkouts()`, `getSportSettings()` — use `listActivities()`, `listEvents()`, `listWellness()`, `listWorkouts()`, `sportSettings.list()` respectively
+- Numeric activity ID backward-compat shim (`client.getActivity(12345)`) — activity IDs are strictly `string` now
+
+### Added
+- [Migration Guide](./docs/MIGRATION.md) with full table of removed methods and before/after examples
+
 ## [2.0.0] - 2025-03-03
 
 ### Added
