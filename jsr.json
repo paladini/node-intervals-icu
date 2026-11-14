@@ -1,0 +1,12 @@
+{
+  "name": "@paladini/intervals-icu",
+  "version": "2.2.1",
+  "license": "MIT",
+  "description": "Comprehensive TypeScript client library for the Intervals.icu API — 100+ endpoints, full type safety, OAuth & API key auth",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publish": {
+    "include": ["src/**/*.ts", "README.md", "LICENSE"]
+  }
+}

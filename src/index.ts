@@ -4,6 +4,8 @@
  * Comprehensive TypeScript client library for the Intervals.icu API.
  * Supports 100+ endpoints across 13 resource groups with full type safety.
  *
+ * **Runtimes:** Node.js 18+ (`intervals-icu` on npm) · Deno/Bun via JSR (`@paladini/intervals-icu`).
+ *
  * @packageDocumentation
  */
 
