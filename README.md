@@ -2,6 +2,7 @@
 
 <a href="https://paladini.io/harness-score/guide/maturity-model#l1-%C2%B7-documented" title="Harness Score — AI coding harness maturity"><img alt="Harness Score L1 (Documented): measures AI-assisted development harness maturity with harness-score" src="https://paladini.github.io/harness-score/maturity/badge-l1.svg" height="20"></a>
 [![npm version](https://img.shields.io/npm/v/intervals-icu)](https://www.npmjs.com/package/intervals-icu)
+[![JSR](https://jsr.io/badges/@paladini/intervals-icu)](https://jsr.io/@paladini/intervals-icu)
 [![npm downloads](https://img.shields.io/npm/dm/intervals-icu)](https://www.npmjs.com/package/intervals-icu)
 [![license](https://img.shields.io/npm/l/intervals-icu)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)](https://www.typescriptlang.org/)
@@ -26,6 +27,14 @@ The most comprehensive TypeScript client for the [Intervals.icu](https://interva
 ```bash
 npm install intervals-icu
 ```
+
+**JSR** (Deno / Bun, TypeScript sources as `@paladini/intervals-icu`):
+
+```bash
+npx jsr add @paladini/intervals-icu
+```
+
+Node.js 18+ for npm; JSR consumers run on Deno 1.40+ or Bun 1.0+.
 
 ## Quick Start
 

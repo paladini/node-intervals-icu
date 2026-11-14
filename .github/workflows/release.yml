@@ -92,3 +92,18 @@ jobs:
         run: |
           npm pkg set name=@paladini/intervals-icu
           npm publish --access public --tag "${{ steps.package.outputs.dist_tag }}"
+
+  jsr:
+    name: Publish JSR
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    needs: publish
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npx -y jsr publish --allow-slow-types
