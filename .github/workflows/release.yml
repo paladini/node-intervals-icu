@@ -95,9 +95,8 @@ jobs:
 
   jsr:
     name: Publish JSR
-    if: github.event_name == 'push'
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
-    needs: publish
     permissions:
       contents: read
       id-token: write
@@ -106,4 +105,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - run: npm ci
+      - run: npm test
+      - run: npx -y jsr publish --dry-run --allow-slow-types
       - run: npx -y jsr publish --allow-slow-types
